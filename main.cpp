@@ -2,7 +2,7 @@
 #include <set>
 
 #include "Alphabet.hpp"
-#include "util.hpp"
+#include "util/util.hpp"
 
 using sizeVec = std::vector<size_t>;
 
@@ -18,35 +18,35 @@ int main() {
     for (size_t i = 0; i < util::calcPower(alpha.size(), T); ++i)
         symbols.insert(alpha.toSymbol(i, T));
 
-    const auto idxs = util::range(1, symbols.size());
-    const auto perms = util::perms_r(idxs, L / T);
-    const auto combs = util::combs_r(perms, P);
+    const auto indices = util::range(1, symbols.size());
+    const auto perm_indices = util::Combinatorics::perms_r(indices, L / T);
+    const auto comb_groups = util::Combinatorics::combs_r(perm_indices, P);
 
-    std::set<decltype(combs)::value_type> combs2;
-    for (const auto& c : combs) {
+    std::set<decltype(comb_groups)::value_type> filtered_groups;
+    for (const auto& group : comb_groups) {
         util::ull sum = 0;
-        for (const auto& p : c)
-            sum += util::calcProduct(p);
+        for (const auto& pattern : group)
+            sum += util::calcProduct(pattern);
 
         if (sum == N)
-            combs2.insert(c);
+            filtered_groups.insert(group);
     }
 
-    std::set<ProductSet> result;
-    for (const auto& c : combs2) {
+    std::set<ProductSet> res;
+
+    for (const auto& group : filtered_groups) {
         std::set<ProductSet> prodSet;
-        for (const auto& p : c) {
-            std::vector<std::set<SymbolSet>> s;
-            for (size_t i : p)
-                s.push_back(util::combs(symbols, i));
-            auto prod = util::prod_V(s);
-            prodSet.insert(prod);
+        for (const auto& pattern : group) {
+            std::vector<std::set<SymbolSet>> combsSet;
+            for (size_t num : pattern)
+                combsSet.push_back(util::Combinatorics::combs(symbols, num));
+            prodSet.insert(util::Product::asVec(combsSet));
         }
-        auto prod2 = util::prod_S(prodSet);
-        result.insert(prod2.begin(), prod2.end());
+        auto expanded_products = util::Product::asSet(prodSet);
+        res.insert(expanded_products.begin(), expanded_products.end());
     }
 
-    std::cout << "Total: " << result.size() << std::endl;
+    std::cout << "Total: " << res.size() << std::endl;
 
     return 0;
 }

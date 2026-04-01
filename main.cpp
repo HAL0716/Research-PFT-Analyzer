@@ -1,11 +1,14 @@
 #include <iostream>
 
+#include "Alphabet.hpp"
 #include "util.hpp"
 
 int main() {
-    util::ull base = 2;
-    util::ull exp = 10;
-    util::ull result = util::calcPower(base, exp);
-    std::cout << base << "^" << exp << " = " << result << std::endl;
+    size_t Q = 3, T = 2;
+    Alphabet alpha(Q);
+
+    for (size_t i = 0; i < util::calcPower(alpha.size(), T); ++i)
+        std::cout << alpha.toSymbol(i, T) << std::endl;
+
     return 0;
 }

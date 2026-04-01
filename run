@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+使用方法: ./run <file> (拡張子あり/なし)
+例:
+  ./run sample
+  ./run sample.cpp
+EOF
+  exit 1
+}
+
+# include ディレクトリ一覧
+INCLUDE_DIRS=(
+  include
+)
+
+# 変更時刻取得（macOS / Linux 両対応）
+mtime() {
+  local file="$1"
+  if stat -f "%m" "$file" >/dev/null 2>&1; then
+    stat -f "%m" "$file"
+  else
+    stat -c "%Y" "$file"
+  fi
+}
+
+# include配下の最新更新時刻を取得
+latest_include_mtime() {
+  local latest=0
+
+  for dir in "${INCLUDE_DIRS[@]}"; do
+    [[ -d "$dir" ]] || continue
+
+    while IFS= read -r file; do
+      local t
+      t="$(mtime "$file")"
+      (( t > latest )) && latest="$t"
+    done < <(find "$dir" \( -name '*.h' -o -name '*.hpp' \))
+  done
+
+  echo "$latest"
+}
+
+needs_recompile() {
+  local src="$1"
+  local out="$2"
+
+  [[ ! -f "$out" ]] && return 0
+
+  local src_time out_time inc_time
+  src_time="$(mtime "$src")"
+  out_time="$(mtime "$out")"
+  inc_time="$(latest_include_mtime)"
+
+  (( src_time > out_time || inc_time > out_time ))
+}
+
+compile() {
+  local src="$1"
+  local out="$2"
+
+  local includes=()
+  for dir in "${INCLUDE_DIRS[@]}"; do
+    includes+=("-I$dir")
+  done
+
+  g++ -std=c++20 -O2 -Wall -Wextra "${includes[@]}" -o "$out" "$src"
+}
+
+run_bin() {
+  local out="$1"
+  "$out"
+}
+
+main() {
+  [[ $# -ne 1 ]] && usage
+
+  mkdir -p build
+
+  local base="${1%.cpp}"
+  local src="${base}.cpp"
+  local out="build/${base}"
+
+  [[ ! -f "$src" ]] && { echo "エラー: ソースが見つかりません: $src" >&2; exit 1; }
+
+  if needs_recompile "$src" "$out"; then
+    echo "[build] compiling..."
+    compile "$src" "$out"
+  else
+    echo "[build] up to date"
+  fi
+
+  run_bin "$out"
+}
+
+main "$@"

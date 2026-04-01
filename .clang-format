@@ -1,0 +1,45 @@
+# ==== ベーススタイル ====
+BasedOnStyle: LLVM
+
+# ==== インデント・空白 ====
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+NamespaceIndentation: All
+
+# ==== 波括弧（ブレース）スタイル ====
+BreakBeforeBraces: Attach
+
+# ==== 関数の整形 ====
+AllowShortFunctionsOnASingleLine: None
+
+# ==== スペース制御 ====
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# ==== ポインタ・参照の位置 ====
+PointerAlignment: Left
+
+# ==== 整列（アライン） ====
+AlignConsecutiveDeclarations: false
+AlignConsecutiveAssignments: false
+
+# ==== 改行・行長 ====
+ColumnLimit: 0
+
+# ==== 空行制御 ====
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+# ==== include関連 ====
+SortIncludes: true
+IncludeBlocks: Regroup
+
+IncludeCategories:
+  - Regex: '^<.*>$'
+    Priority: 1
+
+  - Regex: '^".*"$'
+    Priority: 2

@@ -25,6 +25,12 @@ namespace util {
         return prod;
     }
 
+    template <typename Container>
+    void normalize(Container& c) {
+        std::sort(c.begin(), c.end());
+        c.erase(std::unique(c.begin(), c.end()), c.end());
+    }
+
     std::vector<size_t> range(size_t st, size_t ed) {
         std::vector<size_t> v(ed - st);
         std::iota(v.begin(), v.end(), st);
@@ -87,7 +93,10 @@ namespace util {
     auto combs(const Container& elems, size_t P) {
         using T = typename Container::value_type;
         std::vector<T> v(elems.begin(), elems.end());
-        return comb(v, P, false, false);
+        std::set<std::set<T>> result;
+        for (const auto& vec : comb(v, P, false, false))
+            result.insert(std::set<T>(vec.begin(), vec.end()));
+        return result;
     }
 
     template <typename Container>
@@ -109,5 +118,45 @@ namespace util {
         using T = typename Container::value_type;
         std::vector<T> v(elems.begin(), elems.end());
         return comb(v, P, true, true);
+    }
+
+    template <typename OuterContainer, typename CurrentContainer>
+    auto prod_impl(const OuterContainer& elems) {
+        std::set<CurrentContainer> res;
+        CurrentContainer cur;
+
+        auto dfs = [&](auto&& self, auto it) -> void {
+            if (it == elems.end()) {
+                res.insert(cur);
+                return;
+            }
+
+            for (const auto& v : *it) {
+                if constexpr (requires { cur.push_back(v); }) {
+                    cur.push_back(v);
+                    self(self, std::next(it));
+                    cur.pop_back();
+                } else {
+                    cur.insert(v);
+                    self(self, std::next(it));
+                    cur.erase(v);
+                }
+            }
+        };
+
+        dfs(dfs, elems.begin());
+        return res;
+    }
+
+    template <typename OuterContainer>
+    auto prod_V(const OuterContainer& elems) {
+        using T = typename OuterContainer::value_type::value_type;
+        return prod_impl<OuterContainer, std::vector<T>>(elems);
+    }
+
+    template <typename OuterContainer>
+    auto prod_S(const OuterContainer& elems) {
+        using T = typename OuterContainer::value_type::value_type;
+        return prod_impl<OuterContainer, std::set<T>>(elems);
     }
 } // namespace util

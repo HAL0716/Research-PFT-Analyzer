@@ -14,7 +14,7 @@ namespace util {
     }
 
     inline std::vector<size_t> range(size_t st, size_t ed) {
-        std::vector<size_t> v(ed - st);
+        std::vector<size_t> v(ed - st + 1);
         std::iota(v.begin(), v.end(), st);
         return v;
     }

@@ -13,7 +13,13 @@ struct Config {
         validate();
     }
 
+    std::string toPath() const {
+        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", OUT_DIR, T, L, P, Q, N);
+    }
+
   private:
+    const std::string OUT_DIR = "output";
+
     void validate() const {
         if (Q == 0)
             throw std::invalid_argument("Q");

@@ -57,7 +57,6 @@ int main() {
     }
 
     std::set<ProductSet> res;
-    
     for (const auto& group : filtered_groups) {
         std::vector<ProductSet> prodVec;
         for (const auto& pattern : group) {
@@ -71,7 +70,18 @@ int main() {
                 res.insert(ps);
     }
 
-    std::cout << "Total: " << res.size() << std::endl;
+    auto csv = util::createFile(cfg.toPath());
+    for (const auto& ps : res) {
+        std::set<std::string> psStr;
+        for (const auto& prod : ps) {
+            std::vector<std::string> prodStr;
+            for (const auto& symSet : prod)
+                prodStr.push_back(util::join(symSet, "-"));
+            psStr.insert(util::join(prodStr, ","));
+        }
+        csv << util::join(psStr, ",") << std::endl;
+    }
+    std::cout << cfg.toPath() << " Saved." << std::endl;
 
     return 0;
 }

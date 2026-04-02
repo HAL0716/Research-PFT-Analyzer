@@ -197,15 +197,23 @@ namespace {
 } // namespace
 
 int main() {
-    Config cfg(3, 2, 4, 4, 2);
-    Alphabet alpha(cfg.Q);
+    constexpr size_t Q = 2, T = 2, L = 4, P = 2;
+    const size_t maxN = util::calcPower(Q, L);
 
-    SymbolSet symbols = genSymbols(cfg, alpha);
-    Validator validate(cfg, alpha, symbols);
+    for (size_t N = 1; N <= maxN; ++N) {
+        if (N < P)
+            continue;
+        Config cfg(Q, T, L, N, P);
 
-    auto products = genProductSet(cfg, symbols, validate);
+        Alphabet alpha(cfg.Q);
+        SymbolSet symbols = genSymbols(cfg, alpha);
+        Validator validate(cfg, alpha, symbols);
 
-    writeCSV(products, cfg);
+        auto products = genProductSet(cfg, symbols, validate);
+
+        if (!products.empty())
+            writeCSV(products, cfg);
+    }
 
     return 0;
 }

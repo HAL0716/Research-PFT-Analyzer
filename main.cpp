@@ -1,11 +1,10 @@
 #include <iostream>
 #include <set>
+#include <vector>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
 #include "util/util.hpp"
-
-using sizeVec = std::vector<size_t>;
 
 using Symbol = std::string;
 using SymbolSet = std::set<Symbol>;
@@ -14,103 +13,182 @@ using ProductSet = std::set<Product>;
 
 namespace {
 
-    class Validator {
-      public:
-        Validator(const Config& cfg, const SymbolSet& symbols, const Alphabet& alpha)
-            : cfg_(cfg), symbols_(symbols), alpha_(alpha) {
+    SymbolSet genSymbols(const Config& cfg, const Alphabet& alpha) {
+        SymbolSet symbols;
+
+        const size_t limit = util::calcPower(alpha.size(), cfg.T);
+        for (size_t i = 0; i < limit; ++i)
+            symbols.insert(alpha.toSymbol(i, cfg.T));
+
+        return symbols;
+    }
+
+    SymbolSet expand(const Product& p) {
+        SymbolSet res{""};
+
+        for (const auto& ss : p) {
+            SymbolSet next;
+            for (const auto& prefix : res)
+                for (const auto& s : ss)
+                    next.insert(prefix + s);
+            res.swap(next);
         }
 
-        bool operator()(const ProductSet& prodSet) const {
-            return checkFirstSymbol(prodSet) && checkSize(prodSet) && checkIntersection(prodSet) && checkMapping(prodSet);
+        return res;
+    }
+
+    SymbolSet toWords(const ProductSet& ps) {
+        SymbolSet words;
+
+        for (const auto& p : ps) {
+            auto expanded = expand(p);
+            words.insert(expanded.begin(), expanded.end());
+        }
+
+        return words;
+    }
+
+    Product applyMap(const Product& p, const Alphabet& alpha, const Symbol& map) {
+        Product result;
+
+        for (const auto& symSet : p) {
+            SymbolSet mappedSet;
+
+            for (const auto& sym : symSet)
+                mappedSet.insert(alpha.add(sym, map));
+
+            result.push_back(mappedSet);
+        }
+
+        return result;
+    }
+
+    ProductSet applyMap(const ProductSet& ps, const Alphabet& alpha, const Symbol& map) {
+        ProductSet out;
+
+        for (const auto& p : ps)
+            out.insert(applyMap(p, alpha, map));
+
+        return out;
+    }
+
+    class Validator {
+      public:
+        Validator(const Config& cfg, const Alphabet& alpha, const SymbolSet& symbols)
+            : cfg_(cfg), alpha_(alpha), symbols_(symbols) {
+        }
+
+        bool operator()(const ProductSet& ps) const {
+            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNoIntersection(ps) && hasMappingInvariance(ps);
         }
 
       private:
         const Config& cfg_;
-        const SymbolSet& symbols_;
         const Alphabet& alpha_;
+        const SymbolSet& symbols_;
 
-        bool checkFirstSymbol(const ProductSet& prodSet) const {
+        bool hasCorrectSize(const ProductSet& ps) const {
+            return ps.size() == cfg_.P;
+        }
+
+        bool hasFirstSymbol(const ProductSet& ps) const {
             const Symbol& target = *symbols_.begin();
 
-            for (const auto& prod : prodSet)
-                for (const auto& sym : prod[0])
-                    if (sym == target)
+            for (const auto& p : ps)
+                for (const auto& s : p[0])
+                    if (s == target)
                         return true;
 
             return false;
         }
 
-        bool checkSize(const ProductSet& prodSet) const {
-            return prodSet.size() == cfg_.P;
-        }
+        bool hasNoIntersection(const ProductSet& ps) const {
+            std::vector<Product> v(ps.begin(), ps.end());
 
-        bool checkIntersection(const ProductSet& prodSet) const {
-            auto hasIntersection = [](const Product& a, const Product& b) {
-                for (size_t d = 0; d < a.size(); ++d)
-                    if (!util::hasIntersection(a[d], b[d]))
+            auto intersect = [](const Product& a, const Product& b) {
+                for (size_t i = 0; i < a.size(); ++i)
+                    if (!util::hasIntersection(a[i], b[i]))
                         return false;
                 return true;
             };
 
-            std::vector<Product> comb(prodSet.begin(), prodSet.end());
-            for (size_t i = 0; i < comb.size(); ++i)
-                for (size_t j = i + 1; j < comb.size(); ++j)
-                    if (hasIntersection(comb[i], comb[j]))
+            for (size_t i = 0; i < v.size(); ++i)
+                for (size_t j = i + 1; j < v.size(); ++j)
+                    if (intersect(v[i], v[j]))
                         return false;
 
             return true;
         }
 
-        ProductSet applyMap(const ProductSet& prodSet, const Symbol& map) const {
-            ProductSet mapSet;
-
-            for (const auto& prod : prodSet) {
-                Product mapProd;
-
-                for (const auto& symSet : prod) {
-                    SymbolSet mapSymSet;
-                    for (const auto& sym : symSet)
-                        mapSymSet.insert(alpha_.add(sym, map));
-
-                    mapProd.push_back(mapSymSet);
-                }
-
-                mapSet.insert(mapProd);
-            }
-
-            return mapSet;
-        }
-
-        bool checkMapping(const ProductSet& prodSet) const {
-
+        bool hasMappingInvariance(const ProductSet& ps) const {
             std::set<SymbolSet> mappedWords;
-            for (const auto& map : symbols_)
-                mappedWords.insert(toWords(applyMap(prodSet, map)));
+            for (const auto& m : symbols_)
+                mappedWords.insert(toWords(applyMap(ps, alpha_, m)));
 
-            return toWords(prodSet) == *mappedWords.begin();
-        }
-
-        SymbolSet toWords(const ProductSet& ps) const {
-            auto expand = [](const Product& p) -> SymbolSet {
-                SymbolSet res{""};
-                for (const SymbolSet& ss : p) {
-                    SymbolSet next;
-                    for (const Symbol& prefix : res)
-                        for (const Symbol& s : ss)
-                            next.insert(prefix + s);
-                    res.swap(next);
-                }
-                return res;
-            };
-
-            SymbolSet words;
-            for (const Product& p : ps) {
-                SymbolSet tmp = expand(p);
-                words.insert(tmp.begin(), tmp.end());
-            }
-            return words;
+            return toWords(ps) == *mappedWords.begin();
         }
     };
+
+    auto genBluePrint(const Config& cfg, const SymbolSet& symbols) {
+        auto calcSum = [](const std::vector<std::vector<size_t>>& group) -> util::ull {
+            util::ull sum = 0;
+            for (const auto& pattern : group)
+                sum += util::calcProduct(pattern);
+            return sum;
+        };
+
+        const auto indices = util::range(1, symbols.size());
+        const auto perms = util::Combinatorics::perms_r(indices, cfg.L / cfg.T);
+        const auto groups = util::Combinatorics::combs_r(perms, cfg.P);
+
+        std::set<decltype(groups)::value_type> res;
+
+        for (const auto& g : groups)
+            if (calcSum(g) == cfg.N)
+                res.insert(g);
+
+        return res;
+    }
+
+    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
+        const auto base = genBluePrint(cfg, symbols);
+
+        std::set<ProductSet> result;
+
+        for (const auto& group : base) {
+            std::vector<ProductSet> candidates;
+
+            for (const auto& pattern : group) {
+                std::vector<std::set<SymbolSet>> combs;
+
+                for (auto n : pattern)
+                    combs.push_back(util::Combinatorics::combs(symbols, n));
+
+                candidates.push_back(util::Product::asVec(combs));
+            }
+
+            for (const auto& ps : util::Product::asSet(candidates))
+                if (isValid(ps))
+                    result.insert(ps);
+        }
+
+        return result;
+    }
+
+    void writeCSV(const std::set<ProductSet>& res, const Config& cfg) {
+        auto csv = util::createFile(cfg.toPath());
+        for (const auto& ps : res) {
+            std::set<std::string> row;
+            for (const auto& p : ps) {
+                std::vector<std::string> parts;
+                for (const auto& ss : p)
+                    parts.push_back(util::join(ss, "-"));
+                row.insert(util::join(parts, ","));
+            }
+            csv << util::join(row, ",") << std::endl;
+        }
+        std::cout << cfg.toPath() << " Saved." << std::endl;
+    }
 
 } // namespace
 
@@ -118,52 +196,12 @@ int main() {
     Config cfg(3, 2, 4, 4, 2);
     Alphabet alpha(cfg.Q);
 
-    SymbolSet symbols;
-    for (size_t i = 0; i < util::calcPower(alpha.size(), cfg.T); ++i)
-        symbols.insert(alpha.toSymbol(i, cfg.T));
+    SymbolSet symbols = genSymbols(cfg, alpha);
+    Validator validate(cfg, alpha, symbols);
 
-    Validator isValid(cfg, symbols, alpha);
+    auto products = genProductSet(cfg, symbols, validate);
 
-    const auto indices = util::range(1, symbols.size());
-    const auto perm_indices = util::Combinatorics::perms_r(indices, cfg.L / cfg.T);
-    const auto comb_groups = util::Combinatorics::combs_r(perm_indices, cfg.P);
-
-    std::set<decltype(comb_groups)::value_type> filtered_groups;
-    for (const auto& group : comb_groups) {
-        util::ull sum = 0;
-        for (const auto& pattern : group)
-            sum += util::calcProduct(pattern);
-
-        if (sum == cfg.N)
-            filtered_groups.insert(group);
-    }
-
-    std::set<ProductSet> res;
-    for (const auto& group : filtered_groups) {
-        std::vector<ProductSet> prodVec;
-        for (const auto& pattern : group) {
-            std::vector<std::set<SymbolSet>> combsSet;
-            for (size_t num : pattern)
-                combsSet.push_back(util::Combinatorics::combs(symbols, num));
-            prodVec.push_back(util::Product::asVec(combsSet));
-        }
-        for (const auto& ps : util::Product::asSet(prodVec))
-            if (isValid(ps))
-                res.insert(ps);
-    }
-
-    auto csv = util::createFile(cfg.toPath());
-    for (const auto& ps : res) {
-        std::set<std::string> psStr;
-        for (const auto& prod : ps) {
-            std::vector<std::string> prodStr;
-            for (const auto& symSet : prod)
-                prodStr.push_back(util::join(symSet, "-"));
-            psStr.insert(util::join(prodStr, ","));
-        }
-        csv << util::join(psStr, ",") << std::endl;
-    }
-    std::cout << cfg.toPath() << " Saved." << std::endl;
+    writeCSV(products, cfg);
 
     return 0;
 }

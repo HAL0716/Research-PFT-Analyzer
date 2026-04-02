@@ -12,78 +12,107 @@ using SymbolSet = std::set<Symbol>;
 using Product = std::vector<SymbolSet>;
 using ProductSet = std::set<Product>;
 
-std::set<std::string> toWords(const ProductSet& ps) {
-    auto expand = [](const Product& p) -> std::set<std::string> {
-        std::set<std::string> res{""};
-        for (const SymbolSet& ss : p) {
-            std::set<std::string> next;
-            for (const Symbol& prefix : res)
-                for (const Symbol& s : ss)
-                    next.insert(prefix + s);
-            res.swap(next);
+namespace {
+
+    class Validator {
+      public:
+        Validator(const Config& cfg, const SymbolSet& symbols, const Alphabet& alpha)
+            : cfg_(cfg), symbols_(symbols), alpha_(alpha) {
         }
-        return res;
-    };
 
-    std::set<std::string> words;
-    for (const Product& p : ps) {
-        std::set<std::string> tmp = expand(p);
-        words.insert(tmp.begin(), tmp.end());
-    }
+        bool operator()(const ProductSet& prodSet) const {
+            return checkFirstSymbol(prodSet) && checkSize(prodSet) && checkIntersection(prodSet) && checkMapping(prodSet);
+        }
 
-    return words;
-}
+      private:
+        const Config& cfg_;
+        const SymbolSet& symbols_;
+        const Alphabet& alpha_;
 
-bool isValid(const ProductSet& prodSet, const Config& cfg, const SymbolSet& symbols, const Alphabet& alpha) {
-    SymbolSet firstSymbols;
-    for (const auto& prod : prodSet)
-        firstSymbols.insert(prod[0].begin(), prod[0].end());
-    if (!firstSymbols.contains(*symbols.begin()))
-        return false;
+        bool checkFirstSymbol(const ProductSet& prodSet) const {
+            const Symbol& target = *symbols_.begin();
 
-    auto hasIntersection = [&](const Product& a, const Product& b) -> bool {
-        for (size_t d = 0; d < a.size(); ++d)
-            if (!util::hasIntersection(a[d], b[d]))
-                return false;
+            for (const auto& prod : prodSet)
+                for (const auto& sym : prod[0])
+                    if (sym == target)
+                        return true;
 
-        return true;
-    };
+            return false;
+        }
 
-    std::vector<Product> comb(prodSet.begin(), prodSet.end());
+        bool checkSize(const ProductSet& prodSet) const {
+            return prodSet.size() == cfg_.P;
+        }
 
-    const size_t n = comb.size();
-    if (n != cfg.P)
-        return false;
+        bool checkIntersection(const ProductSet& prodSet) const {
+            auto hasIntersection = [](const Product& a, const Product& b) {
+                for (size_t d = 0; d < a.size(); ++d)
+                    if (!util::hasIntersection(a[d], b[d]))
+                        return false;
+                return true;
+            };
 
-    for (size_t i = 0; i < n; ++i)
-        for (size_t j = i + 1; j < n; ++j)
-            if (hasIntersection(comb[i], comb[j]))
-                return false;
+            std::vector<Product> comb(prodSet.begin(), prodSet.end());
+            for (size_t i = 0; i < comb.size(); ++i)
+                for (size_t j = i + 1; j < comb.size(); ++j)
+                    if (hasIntersection(comb[i], comb[j]))
+                        return false;
 
-    std::set<ProductSet> mapSets;
-    for (const auto& map : symbols) {
-        ProductSet mapSet;
-        for (const auto& prod : prodSet) {
-            Product mapProd;
-            for (const auto& symSet : prod) {
-                SymbolSet mapSymSet;
-                for (const auto& sym : symSet) {
-                    mapSymSet.insert(alpha.add(sym, map));
+            return true;
+        }
+
+        ProductSet applyMap(const ProductSet& prodSet, const Symbol& map) const {
+            ProductSet mapSet;
+
+            for (const auto& prod : prodSet) {
+                Product mapProd;
+
+                for (const auto& symSet : prod) {
+                    SymbolSet mapSymSet;
+                    for (const auto& sym : symSet)
+                        mapSymSet.insert(alpha_.add(sym, map));
+
+                    mapProd.push_back(mapSymSet);
                 }
-                mapProd.push_back(mapSymSet);
+
+                mapSet.insert(mapProd);
             }
-            mapSet.insert(mapProd);
+
+            return mapSet;
         }
-        mapSets.insert(mapSet);
-    }
 
-    const auto words = toWords(prodSet);
-    std::set<std::set<std::string>> mapWords;
-    for (const auto& mapSet : mapSets)
-        mapWords.insert(toWords(mapSet));
+        bool checkMapping(const ProductSet& prodSet) const {
 
-    return words == *mapWords.begin();
-}
+            std::set<SymbolSet> mappedWords;
+            for (const auto& map : symbols_)
+                mappedWords.insert(toWords(applyMap(prodSet, map)));
+
+            return toWords(prodSet) == *mappedWords.begin();
+        }
+
+        SymbolSet toWords(const ProductSet& ps) const {
+            auto expand = [](const Product& p) -> SymbolSet {
+                SymbolSet res{""};
+                for (const SymbolSet& ss : p) {
+                    SymbolSet next;
+                    for (const Symbol& prefix : res)
+                        for (const Symbol& s : ss)
+                            next.insert(prefix + s);
+                    res.swap(next);
+                }
+                return res;
+            };
+
+            SymbolSet words;
+            for (const Product& p : ps) {
+                SymbolSet tmp = expand(p);
+                words.insert(tmp.begin(), tmp.end());
+            }
+            return words;
+        }
+    };
+
+} // namespace
 
 int main() {
     Config cfg(3, 2, 4, 4, 2);
@@ -92,6 +121,8 @@ int main() {
     SymbolSet symbols;
     for (size_t i = 0; i < util::calcPower(alpha.size(), cfg.T); ++i)
         symbols.insert(alpha.toSymbol(i, cfg.T));
+
+    Validator isValid(cfg, symbols, alpha);
 
     const auto indices = util::range(1, symbols.size());
     const auto perm_indices = util::Combinatorics::perms_r(indices, cfg.L / cfg.T);
@@ -117,7 +148,7 @@ int main() {
             prodVec.push_back(util::Product::asVec(combsSet));
         }
         for (const auto& ps : util::Product::asSet(prodVec))
-            if (isValid(ps, cfg, symbols, alpha))
+            if (isValid(ps))
                 res.insert(ps);
     }
 

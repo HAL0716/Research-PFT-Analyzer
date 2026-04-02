@@ -4,6 +4,7 @@
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
+#include "Logger.hpp"
 #include "util/util.hpp"
 
 using Symbol = std::string;
@@ -155,7 +156,10 @@ namespace {
 
         std::set<ProductSet> result;
 
+        size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
+            Logger::progress(++cnt, total, "Generating candidates: ", true);
+
             std::vector<ProductSet> candidates;
 
             for (const auto& pattern : group) {

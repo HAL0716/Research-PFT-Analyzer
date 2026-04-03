@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iterator>
 #include <set>
 #include <vector>
 

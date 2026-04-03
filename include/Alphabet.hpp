@@ -1,8 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 class Alphabet {
   public:

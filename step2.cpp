@@ -7,6 +7,7 @@
 #include "Alphabet.hpp"
 #include "Config.hpp"
 #include "Graph.hpp"
+#include "Logger.hpp"
 #include "util/util.hpp"
 
 using Symbol = std::string;
@@ -73,7 +74,10 @@ namespace {
         auto graph = Graph(cfg, alpha);
 
         auto csv = util::createFile(cfg.toPath());
+        size_t cnt = 0, total = res.size();
         for (const auto& ps : res) {
+            Logger::progress(++cnt, total, "Graph Generation: ", true);
+
             std::vector<std::string> row;
 
             graph.set(toWords(ps));

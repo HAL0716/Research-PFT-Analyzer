@@ -10,10 +10,17 @@
 
 struct Config {
     size_t Q = 2, T = 2, L = 4, N = 4, P = 2; // default values
+    std::string inDir;
     std::string outDir;
 
-    explicit Config(const std::string& inFile, const std::string& outDir = "output")
+    explicit Config(const std::string& inFile, const std::string& outDir)
         : outDir(outDir) {
+        set(inFile);
+        validate();
+    }
+
+    explicit Config(const std::string& inFile, const std::string& inDir, const std::string& outDir)
+        : inDir(inDir), outDir(outDir) {
         set(inFile);
         validate();
     }
@@ -25,8 +32,9 @@ struct Config {
         return c;
     }
 
-    std::string toPath() const {
-        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", outDir, T, L, P, Q, N);
+    std::string toPath(bool isInput = false) const {
+        const auto& dir = isInput ? inDir : outDir;
+        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", dir, T, L, P, Q, N);
     }
 
   private:

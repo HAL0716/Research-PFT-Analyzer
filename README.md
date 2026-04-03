@@ -8,5 +8,5 @@ chmod +x run
 
 2. 実行
 ```bash
-./run main.cpp
+./run step1.cpp
 ```

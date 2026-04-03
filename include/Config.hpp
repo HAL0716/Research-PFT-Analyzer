@@ -2,25 +2,19 @@
 
 #include <cstddef>
 #include <format>
+#include <fstream>
 #include <stdexcept>
 #include <string>
 
 #include "util/util.hpp"
 
 struct Config {
-    size_t Q = 2;
-    size_t T = 2;
-    size_t L = 4;
-    size_t N = 4;
-    size_t P = 2;
+    size_t Q = 2, T = 2, L = 4, N = 4, P = 2; // default values
+    std::string outDir;
 
-    std::string outDir = "output";
-
-    Config() {
-        validate();
-    }
-
-    Config(std::string outDir) : outDir(std::move(outDir)) {
+    explicit Config(const std::string& inFile, const std::string& outDir = "output")
+        : outDir(outDir) {
+        set(inFile);
         validate();
     }
 
@@ -36,6 +30,29 @@ struct Config {
     }
 
   private:
+    void set(const std::string& path) {
+        auto data = util::readCSV(path);
+
+        for (const auto& row : data) {
+            if (row.size() != 2)
+                continue;
+
+            const auto& key = row[0];
+            const auto& val = row[1];
+
+            if (key == "Q")
+                Q = std::stoul(val);
+            else if (key == "T")
+                T = std::stoul(val);
+            else if (key == "L")
+                L = std::stoul(val);
+            else if (key == "N")
+                N = std::stoul(val);
+            else if (key == "P")
+                P = std::stoul(val);
+        }
+    }
+
     void validate() const {
         if (Q == 0)
             throw std::invalid_argument("Q");

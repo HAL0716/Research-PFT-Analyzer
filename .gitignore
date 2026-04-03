@@ -46,3 +46,6 @@ output/
 
 # IDE and editor directories
 .vscode/
+
+# Configuration files
+config.txt

@@ -197,7 +197,7 @@ namespace {
 } // namespace
 
 int main() {
-    const Config base("output/step1");
+    const Config base("config.txt", "output/step1");
 
     const Alphabet alpha(base.Q);
     const SymbolSet symbols = genSymbols(base, alpha);

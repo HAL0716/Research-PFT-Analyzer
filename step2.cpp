@@ -14,6 +14,34 @@ using ProductSet = std::set<Product>;
 
 namespace {
 
+    auto readCSV(const Config& cfg) {
+        const auto csv = util::readCSV(cfg.toPath(true));
+        std::set<ProductSet> result;
+        for (const auto& row : csv) {
+            if (row.size() != cfg.L / cfg.T * cfg.P)
+                throw std::runtime_error("invalid row size");
+
+            ProductSet ps;
+            for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
+                Product p;
+                for (size_t j = 0; j < cfg.L / cfg.T; ++j) {
+                    SymbolSet ss;
+                    std::stringstream ssStream(row[i + j]);
+                    std::string sym;
+
+                    while (std::getline(ssStream, sym, '-'))
+                        ss.insert(sym);
+
+                    p.push_back(std::move(ss));
+                }
+                ps.insert(std::move(p));
+            }
+            result.insert(std::move(ps));
+        }
+
+        return result;
+    }
+
     void writeCSV(const std::set<ProductSet>& res, const Config& cfg) {
         auto csv = util::createFile(cfg.toPath());
         for (const auto& ps : res) {
@@ -34,32 +62,9 @@ namespace {
 int main() {
     const Config cfg("step1", "step2");
 
-    const auto data = util::readCSV(cfg.toPath(true));
+    auto data = readCSV(cfg);
 
-    std::set<ProductSet> result;
-    for (const auto& row : data) {
-        if (row.size() != cfg.L / cfg.T * cfg.P)
-            throw std::runtime_error("invalid row size");
-
-        ProductSet ps;
-        for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
-            Product p;
-            for (size_t j = 0; j < cfg.L / cfg.T; ++j) {
-                SymbolSet ss;
-                std::stringstream ssStream(row[i + j]);
-                std::string sym;
-
-                while (std::getline(ssStream, sym, '-'))
-                    ss.insert(sym);
-
-                p.push_back(std::move(ss));
-            }
-            ps.insert(std::move(p));
-        }
-        result.insert(std::move(ps));
-    }
-
-    writeCSV(result, cfg);
+    writeCSV(data, cfg);
 
     return 0;
 }

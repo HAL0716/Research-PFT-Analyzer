@@ -1,25 +1,41 @@
 #pragma once
 
 #include <cstddef>
+#include <format>
 #include <stdexcept>
+#include <string>
 
 #include "util/util.hpp"
 
 struct Config {
-    size_t Q, T, L, N, P;
+    size_t Q = 2;
+    size_t T = 2;
+    size_t L = 4;
+    size_t N = 4;
+    size_t P = 2;
 
-    constexpr Config(size_t q, size_t t, size_t l, size_t n, size_t p) noexcept
-        : Q(q), T(t), L(l), N(n), P(p) {
+    std::string outDir = "output";
+
+    Config() {
         validate();
     }
 
+    Config(std::string outDir) : outDir(std::move(outDir)) {
+        validate();
+    }
+
+    Config withN(size_t newN) const {
+        Config c = *this;
+        c.N = newN;
+        c.validate();
+        return c;
+    }
+
     std::string toPath() const {
-        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", OUT_DIR, T, L, P, Q, N);
+        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", outDir, T, L, P, Q, N);
     }
 
   private:
-    const std::string OUT_DIR = "output";
-
     void validate() const {
         if (Q == 0)
             throw std::invalid_argument("Q");

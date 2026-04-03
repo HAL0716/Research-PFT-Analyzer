@@ -197,19 +197,19 @@ namespace {
 } // namespace
 
 int main() {
-    constexpr size_t Q = 2, T = 2, L = 4, P = 2;
-    const size_t maxN = util::calcPower(Q, L);
+    const Config base("output/step1");
 
+    const Alphabet alpha(base.Q);
+    const SymbolSet symbols = genSymbols(base, alpha);
+
+    const size_t maxN = util::calcPower(base.Q, base.L);
     for (size_t N = 1; N <= maxN; ++N) {
-        if (N < P)
+        if (N < base.P)
             continue;
-        Config cfg(Q, T, L, N, P);
 
-        Alphabet alpha(cfg.Q);
-        SymbolSet symbols = genSymbols(cfg, alpha);
-        Validator validate(cfg, alpha, symbols);
-
-        auto products = genProductSet(cfg, symbols, validate);
+        const auto cfg = base.withN(N);
+        const Validator validate(cfg, alpha, symbols);
+        const auto products = genProductSet(cfg, symbols, validate);
 
         if (!products.empty())
             writeCSV(products, cfg);

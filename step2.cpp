@@ -87,11 +87,17 @@ namespace {
 } // namespace
 
 int main() {
-    const Config cfg("step1", "step2");
+    const Config base("step1", "step2");
 
-    auto data = readCSV(cfg);
+    const size_t maxN = util::calcPower(base.Q, base.L);
+    for (size_t N = 1; N <= maxN; ++N) {
+        if (N < base.P)
+            continue;
 
-    writeCSV(data, cfg);
+        const auto cfg = base.withN(N);
+        auto data = readCSV(cfg);
+        writeCSV(data, cfg);
+    }
 
     return 0;
 }

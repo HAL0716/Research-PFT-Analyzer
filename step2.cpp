@@ -32,7 +32,7 @@ namespace {
 } // namespace
 
 int main() {
-    const Config cfg("config.txt", "output/step1", "output/step2");
+    const Config cfg("step1", "step2");
 
     const auto data = util::readCSV(cfg.toPath(true));
 

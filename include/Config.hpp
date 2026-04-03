@@ -2,27 +2,25 @@
 
 #include <cstddef>
 #include <format>
-#include <fstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "util/util.hpp"
 
 struct Config {
-    size_t Q = 2, T = 2, L = 4, N = 4, P = 2; // default values
+    size_t Q = 2, T = 2, L = 4, N = 4, P = 2;
     std::string inDir;
     std::string outDir;
 
-    explicit Config(const std::string& inFile, const std::string& outDir)
+    explicit Config(const std::string& outDir)
         : outDir(outDir) {
-        set(inFile);
-        validate();
+        init();
     }
 
-    explicit Config(const std::string& inFile, const std::string& inDir, const std::string& outDir)
+    Config(const std::string& inDir, const std::string& outDir)
         : inDir(inDir), outDir(outDir) {
-        set(inFile);
-        validate();
+        init();
     }
 
     Config withN(size_t newN) const {
@@ -34,30 +32,32 @@ struct Config {
 
     std::string toPath(bool isInput = false) const {
         const auto& dir = isInput ? inDir : outDir;
-        return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", dir, T, L, P, Q, N);
+        return std::format("{}/{}/T={}_L={}_P={}_Q={}/N={}.csv", RESULT_DIR, dir, T, L, P, Q, N);
     }
 
   private:
+    static constexpr const char* RESULT_DIR = "output";
+    static constexpr const char* CONFIG_FILE = "config.txt";
+
+    void init() {
+        set(CONFIG_FILE);
+        validate();
+    }
+
     void set(const std::string& path) {
         auto data = util::readCSV(path);
+
+        const std::unordered_map<std::string, size_t*> table = {
+            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}};
 
         for (const auto& row : data) {
             if (row.size() != 2)
                 continue;
 
-            const auto& key = row[0];
-            const auto& val = row[1];
-
-            if (key == "Q")
-                Q = std::stoul(val);
-            else if (key == "T")
-                T = std::stoul(val);
-            else if (key == "L")
-                L = std::stoul(val);
-            else if (key == "N")
-                N = std::stoul(val);
-            else if (key == "P")
-                P = std::stoul(val);
+            auto it = table.find(row[0]);
+            if (it != table.end()) {
+                *(it->second) = std::stoul(row[1]);
+            }
         }
     }
 

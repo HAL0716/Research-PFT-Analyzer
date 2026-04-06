@@ -5,16 +5,12 @@
 #include <vector>
 
 #include "Alphabet.hpp"
+#include "Analysis/Engine.hpp"
 #include "Analyzer.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
+#include "Types.hpp"
 #include "util/util.hpp"
-#include "Analysis/Engine.hpp"
-
-using Symbol = std::string;
-using SymbolSet = std::set<Symbol>;
-using Product = std::vector<SymbolSet>;
-using ProductSet = std::set<Product>;
 
 namespace {
 

@@ -22,9 +22,10 @@ struct Config {
         return c;
     }
 
-    std::string toPath(const std::string& dir = "") const {
+    std::string toPath(const std::string& dir = "", bool isIndividual = true) const {
         std::string prefix = dir.empty() ? "" : dir + "/";
-        return std::format("{}/{}T={}_L={}_P={}_Q={}/N={}.csv", RESULT_DIR, prefix, T, L, P, Q, N);
+        std::string suffix = isIndividual ? "N=" + std::to_string(N) : "All";
+        return std::format("{}/{}T={}_L={}_P={}_Q={}/{}.csv", RESULT_DIR, prefix, T, L, P, Q, suffix);
     }
 
   private:

@@ -17,7 +17,7 @@ class Graph {
     using Adj = std::vector<std::vector<SymbolSet>>;
 
     Graph(Config c, Alphabet a) : cfg_(std::move(c)), alpha_(std::move(a)) {
-        labels = genLabels();
+        labels = genSymbols(cfg_, alpha_);
     }
 
     void set(const SymbolSet& words) {
@@ -43,12 +43,14 @@ class Graph {
     }
 
   private:
-    SymbolSet genLabels() const {
-        SymbolSet result;
-        const size_t limit = util::calcPower(alpha_.size(), cfg_.T);
+    SymbolSet genSymbols(const Config& cfg, const Alphabet& alpha) {
+        SymbolSet symbols;
+
+        const size_t limit = util::calcPower(alpha.size(), cfg.T);
         for (size_t i = 0; i < limit; ++i)
-            result.insert(alpha_.toSymbol(i, cfg_.T));
-        return result;
+            symbols.insert(alpha.toSymbol(i, cfg.T));
+
+        return symbols;
     }
 
     Verts genVerts(const SymbolSet& words) const {

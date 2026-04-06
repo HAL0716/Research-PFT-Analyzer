@@ -53,7 +53,7 @@ namespace {
         auto csv = util::createFile(cfg.toPath());
         size_t cnt = 0, total = res.size();
         for (const auto& ps : res) {
-            Logger::progress(++cnt, total, "Graph Generation: ", true);
+            Logger::progress(++cnt, total, "Analysis: ", true);
 
             std::vector<std::string> row;
 

@@ -10,17 +10,9 @@
 
 struct Config {
     size_t Q = 2, T = 2, L = 4, N = 4, P = 2;
-    std::string inDir;
-    std::string outDir;
 
-    explicit Config(const std::string& outDir)
-        : outDir(outDir) {
-        init();
-    }
-
-    Config(const std::string& inDir, const std::string& outDir)
-        : inDir(inDir), outDir(outDir) {
-        init();
+    explicit Config(const std::string& configFile = "config.txt") {
+        init(configFile);
     }
 
     Config withN(size_t newN) const {
@@ -30,17 +22,16 @@ struct Config {
         return c;
     }
 
-    std::string toPath(bool isInput = false) const {
-        const auto& dir = isInput ? inDir : outDir;
-        return std::format("{}/{}/T={}_L={}_P={}_Q={}/N={}.csv", RESULT_DIR, dir, T, L, P, Q, N);
+    std::string toPath(const std::string& dir = "") const {
+        std::string prefix = dir.empty() ? "" : dir + "/";
+        return std::format("{}/{}T={}_L={}_P={}_Q={}/N={}.csv", RESULT_DIR, prefix, T, L, P, Q, N);
     }
 
   private:
     static constexpr const char* RESULT_DIR = "output";
-    static constexpr const char* CONFIG_FILE = "config.txt";
 
-    void init() {
-        set(CONFIG_FILE);
+    void init(const std::string& configFile) {
+        set(configFile);
         validate();
     }
 

@@ -38,7 +38,7 @@ namespace {
     }
 
     auto readCSV(const Config& cfg) {
-        const auto csv = util::readCSV(cfg.toPath(true));
+        const auto csv = util::readCSV(cfg.toPath("step1"));
         std::vector<ProductSet> result;
 
         if (csv.empty())
@@ -73,7 +73,8 @@ namespace {
         const auto alpha = Alphabet(cfg.Q);
         auto graph = Graph(cfg, alpha);
 
-        auto csv = util::createFile(cfg.toPath());
+        const auto csvPath = cfg.toPath("step2-1");
+        auto csv = util::createFile(csvPath);
         size_t cnt = 0, total = res.size();
         for (const auto& ps : res) {
             Logger::progress(++cnt, total, "Graph Generation: ", true);
@@ -87,13 +88,13 @@ namespace {
 
             csv << util::join(resultRow, ",") << std::endl;
         }
-        std::cout << cfg.toPath() << " Saved." << std::endl;
+        std::cout << csvPath << " Saved." << std::endl;
     }
 
 } // namespace
 
 int main() {
-    const Config base("step1", "step2-1");
+    const Config base("config.txt");
 
     const size_t maxN = util::calcPower(base.Q, base.L);
     for (size_t N = 1; N <= maxN; ++N) {

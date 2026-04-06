@@ -9,7 +9,7 @@
 #include "util/util.hpp"
 
 struct Config {
-    size_t Q = 2, T = 2, L = 4, N = 4, P = 2;
+    size_t Q = 2, T = 2, L = 4, N = 4, P = 2, V = 3;
 
     explicit Config(const std::string& configFile = "config.txt") {
         init(configFile);
@@ -39,7 +39,7 @@ struct Config {
         auto data = util::readCSV(path, util::FileErrorPolicy::THROW);
 
         const std::unordered_map<std::string, size_t*> table = {
-            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}};
+            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}, {"V", &V}};
 
         for (const auto& row : data) {
             if (row.size() != 2)
@@ -63,5 +63,7 @@ struct Config {
             throw std::invalid_argument("N");
         if (P == 0 || P > N || P > util::calcPower(Q, T))
             throw std::invalid_argument("P");
+        if (V == 0)
+            throw std::invalid_argument("V");
     }
 };

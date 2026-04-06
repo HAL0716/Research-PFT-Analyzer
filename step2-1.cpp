@@ -13,9 +13,9 @@
 #include "util/util.hpp"
 
 namespace {
+
     SymbolSet expand(const Product& p) {
         SymbolSet res{""};
-
         for (const auto& ss : p) {
             SymbolSet next;
             for (const auto& prefix : res)
@@ -23,43 +23,22 @@ namespace {
                     next.insert(prefix + s);
             res.swap(next);
         }
-
         return res;
     }
 
     SymbolSet toWords(const ProductSet& ps) {
         SymbolSet words;
-
         for (const auto& p : ps) {
             auto expanded = expand(p);
             words.insert(expanded.begin(), expanded.end());
         }
-
         return words;
     }
 
-    std::string format(const Graph::Verts& verts, const Config& cfg) {
-        std::vector<size_t> res(cfg.L / cfg.T + 1, 0);
+    auto parseCSV(const util::csvData& data, const Config& cfg) {
+        std::vector<ProductSet> res;
 
-        for (const auto& s : verts) {
-            size_t pos = s.find('+');
-            if (pos == std::string::npos)
-                pos = s.size();
-
-            res[pos / cfg.T]++;
-        }
-
-        return util::join(res, ",");
-    }
-
-    auto readCSV(const Config& cfg) {
-        const auto csv = util::readCSV(cfg.toPath("step1"));
-        std::vector<ProductSet> result;
-
-        if (csv.empty())
-            return result;
-
-        for (const auto& row : csv) {
+        for (const auto& row : data) {
             if (row.size() != cfg.L / cfg.T * cfg.P)
                 throw std::runtime_error("invalid row size");
 
@@ -78,32 +57,43 @@ namespace {
                 }
                 ps.insert(std::move(p));
             }
-            result.push_back(std::move(ps));
+            res.push_back(std::move(ps));
         }
-
-        return result;
+        return res;
     }
 
-    void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
+    auto analyze(const std::vector<ProductSet>& data, const Config& cfg) {
+        auto format = [](const Graph::Verts& verts, const Config& cfg) -> std::string {
+            std::vector<size_t> res(cfg.L / cfg.T + 1, 0);
+            for (const auto& s : verts) {
+                size_t pos = s.find('+');
+                if (pos == std::string::npos)
+                    pos = s.size();
+                res[pos / cfg.T]++;
+            }
+            return util::join(res, ",");
+        };
+
         const auto alpha = Alphabet(cfg.Q);
         auto graph = Graph(cfg, alpha);
 
-        const auto csvPath = cfg.toPath("step2-1");
-        auto csv = util::createFile(csvPath);
-        size_t cnt = 0, total = res.size();
-        for (const auto& ps : res) {
-            Logger::progress(++cnt, total, "Graph Generation: ", true);
+        util::csvData res;
 
-            std::vector<std::string> resultRow;
+        size_t cnt = 0, total = data.size();
+        for (const auto& ps : data) {
+            Logger::progress(++cnt, total, "Processing: ", true);
+
+            std::vector<std::string> resRow;
 
             graph.set(toWords(ps));
-            resultRow.push_back(format(graph.getV(), cfg));
+            resRow.push_back(format(graph.getV(), cfg));
             graph.minimize();
-            resultRow.push_back(format(graph.getV(), cfg));
+            resRow.push_back(format(graph.getV(), cfg));
 
-            csv << util::join(resultRow, ",") << std::endl;
+            res.push_back(std::move(resRow));
         }
-        std::cout << csvPath << " Saved." << std::endl;
+
+        return res;
     }
 
 } // namespace
@@ -117,10 +107,16 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
-        auto data = readCSV(cfg);
 
-        if (!data.empty())
-            writeCSV(data, cfg);
+        const auto csvRaw = util::readCSV(cfg.toPath("step1"));
+        if (csvRaw.empty())
+            continue;
+
+        const auto csvParsed = parseCSV(csvRaw, cfg);
+
+        const auto res = analyze(csvParsed, cfg);
+
+        util::writeCSV(cfg.toPath("step2-1"), res);
     }
 
     return 0;

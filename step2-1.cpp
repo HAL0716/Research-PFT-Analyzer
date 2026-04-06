@@ -9,31 +9,11 @@
 #include "Config.hpp"
 #include "Graph.hpp"
 #include "Logger.hpp"
+#include "Transform.hpp"
 #include "Types.hpp"
 #include "util/util.hpp"
 
 namespace {
-
-    SymbolSet expand(const Product& p) {
-        SymbolSet res{""};
-        for (const auto& ss : p) {
-            SymbolSet next;
-            for (const auto& prefix : res)
-                for (const auto& s : ss)
-                    next.insert(prefix + s);
-            res.swap(next);
-        }
-        return res;
-    }
-
-    SymbolSet toWords(const ProductSet& ps) {
-        SymbolSet words;
-        for (const auto& p : ps) {
-            auto expanded = expand(p);
-            words.insert(expanded.begin(), expanded.end());
-        }
-        return words;
-    }
 
     auto parseCSV(const util::csvData& data, const Config& cfg) {
         std::vector<ProductSet> res;
@@ -85,7 +65,7 @@ namespace {
 
             std::vector<std::string> resRow;
 
-            graph.set(toWords(ps));
+            graph.set(Transform::toWords(ps));
             resRow.push_back(format(graph.getV(), cfg));
             graph.minimize();
             resRow.push_back(format(graph.getV(), cfg));

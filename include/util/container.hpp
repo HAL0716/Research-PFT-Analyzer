@@ -19,7 +19,7 @@ namespace util {
         return v;
     }
 
-    template <class Container>
+    template <typename Container>
     bool hasIntersection(const Container& a, const Container& b) {
         const auto& small = (a.size() < b.size()) ? a : b;
         const auto& large = (a.size() < b.size()) ? b : a;
@@ -28,11 +28,23 @@ namespace util {
         s.reserve(small.size());
         s.insert(small.begin(), small.end());
 
-        for (const auto& x : large) {
+        for (const auto& x : large)
             if (s.count(x))
                 return true;
-        }
         return false;
+    }
+
+    template <typename Container>
+    Container difference(const Container& a, const Container& b) {
+        std::unordered_set<typename Container::value_type> sb;
+        sb.reserve(b.size());
+        sb.insert(b.begin(), b.end());
+
+        Container result;
+        for (const auto& x : a)
+            if (!sb.count(x))
+                result.insert(result.end(), x);
+        return result;
     }
 
 } // namespace util

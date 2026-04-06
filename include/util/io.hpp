@@ -22,17 +22,25 @@ namespace util {
         return ofs;
     }
 
-    inline std::ifstream openFile(const std::string& path) {
+    enum class FileErrorPolicy {
+        THROW,
+        RETURN_EMPTY
+    };
+
+    inline std::ifstream openFile(const std::string& path, FileErrorPolicy policy = FileErrorPolicy::THROW) {
         std::ifstream ifs(path);
-        if (!ifs)
+        if (!ifs && policy == FileErrorPolicy::THROW)
             throw std::runtime_error("failed to open: " + path);
         return ifs;
     }
 
-    inline auto readCSV(const std::string& path) {
-        auto ifs = openFile(path);
-
+    inline auto readCSV(const std::string& path, FileErrorPolicy policy = FileErrorPolicy::RETURN_EMPTY) {
+        auto ifs = openFile(path, policy);
         std::vector<std::vector<std::string>> data;
+
+        if (!ifs && policy == FileErrorPolicy::RETURN_EMPTY)
+            return data;
+
         std::string line;
 
         while (std::getline(ifs, line)) {

@@ -5,12 +5,8 @@
 #include "Alphabet.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
+#include "Types.hpp"
 #include "util/util.hpp"
-
-using Symbol = std::string;
-using SymbolSet = std::set<Symbol>;
-using Product = std::vector<SymbolSet>;
-using ProductSet = std::set<Product>;
 
 namespace {
 
@@ -197,7 +193,7 @@ namespace {
 } // namespace
 
 int main() {
-    const Config base("config.txt", "output/step1");
+    const Config base("step1");
 
     const Alphabet alpha(base.Q);
     const SymbolSet symbols = genSymbols(base, alpha);

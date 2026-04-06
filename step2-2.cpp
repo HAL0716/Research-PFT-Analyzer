@@ -16,34 +16,14 @@ using Product = std::vector<SymbolSet>;
 using ProductSet = std::set<Product>;
 
 namespace {
-    SymbolSet expand(const Product& p) {
-        SymbolSet res{""};
-
-        for (const auto& ss : p) {
-            SymbolSet next;
-            for (const auto& prefix : res)
-                for (const auto& s : ss)
-                    next.insert(prefix + s);
-            res.swap(next);
-        }
-
-        return res;
-    }
-
-    SymbolSet toWords(const ProductSet& ps) {
-        SymbolSet words;
-
-        for (const auto& p : ps) {
-            auto expanded = expand(p);
-            words.insert(expanded.begin(), expanded.end());
-        }
-
-        return words;
-    }
 
     auto readCSV(const Config& cfg) {
         const auto csv = util::readCSV(cfg.toPath(true));
         std::vector<ProductSet> result;
+
+        if (csv.empty())
+            return result;
+
         for (const auto& row : csv) {
             if (row.size() != cfg.L / cfg.T * cfg.P)
                 throw std::runtime_error("invalid row size");
@@ -71,7 +51,7 @@ namespace {
 
     void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
         const auto alpha = Alphabet(cfg.Q);
-        const auto analyzer = Analyzer(cfg, alpha);
+        auto analyzer = Analyzer(cfg, alpha);
 
         auto csv = util::createFile(cfg.toPath());
         size_t cnt = 0, total = res.size();
@@ -80,7 +60,11 @@ namespace {
 
             std::vector<std::string> row;
 
-            analyzer.run(toWords(ps));
+            analyzer.set(ps);
+            std::vector<std::string> res;
+            for (const auto& b : analyzer.getResult())
+                res.push_back(b ? "1" : "0");
+            csv << util::join(res, ",") << std::endl;
         }
         std::cout << cfg.toPath() << " Saved." << std::endl;
     }
@@ -88,7 +72,7 @@ namespace {
 } // namespace
 
 int main() {
-    const Config base("step1", "step2");
+    const Config base("step1", "step2-2");
 
     const size_t maxN = util::calcPower(base.Q, base.L);
     for (size_t N = 1; N <= maxN; ++N) {
@@ -98,9 +82,8 @@ int main() {
         const auto cfg = base.withN(N);
         auto data = readCSV(cfg);
 
-        const auto ps = data[0]; // 仮に最初の行だけ処理
-
-        break; // 実装中のため
+        if (!data.empty())
+            writeCSV(data, cfg);
     }
 
     return 0;

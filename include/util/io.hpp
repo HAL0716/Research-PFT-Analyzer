@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -67,6 +68,8 @@ namespace util {
 
         for (const auto& row : data)
             ofs << util::join(row, ",") << "\n";
+
+        std::cout << path << " saved." << std::endl;
     }
 
 } // namespace util

@@ -9,18 +9,10 @@
 #include "util/util.hpp"
 
 struct Config {
-    size_t Q = 2, T = 2, L = 4, N = 4, P = 2;
-    std::string inDir;
-    std::string outDir;
+    size_t Q = 2, T = 2, L = 4, N = 4, P = 2, V = 3;
 
-    explicit Config(const std::string& outDir)
-        : outDir(outDir) {
-        init();
-    }
-
-    Config(const std::string& inDir, const std::string& outDir)
-        : inDir(inDir), outDir(outDir) {
-        init();
+    explicit Config(const std::string& configFile = "config.txt") {
+        init(configFile);
     }
 
     Config withN(size_t newN) const {
@@ -30,17 +22,17 @@ struct Config {
         return c;
     }
 
-    std::string toPath(bool isInput = false) const {
-        const auto& dir = isInput ? inDir : outDir;
-        return std::format("{}/{}/T={}_L={}_P={}_Q={}/N={}.csv", RESULT_DIR, dir, T, L, P, Q, N);
+    std::string toPath(const std::string& dir = "", bool isIndividual = true) const {
+        std::string prefix = dir.empty() ? "" : dir + "/";
+        std::string suffix = isIndividual ? "N=" + std::to_string(N) : "All";
+        return std::format("{}/{}T={}_L={}_P={}_Q={}/{}.csv", RESULT_DIR, prefix, T, L, P, Q, suffix);
     }
 
   private:
     static constexpr const char* RESULT_DIR = "output";
-    static constexpr const char* CONFIG_FILE = "config.txt";
 
-    void init() {
-        set(CONFIG_FILE);
+    void init(const std::string& configFile) {
+        set(configFile);
         validate();
     }
 
@@ -48,7 +40,7 @@ struct Config {
         auto data = util::readCSV(path, util::FileErrorPolicy::THROW);
 
         const std::unordered_map<std::string, size_t*> table = {
-            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}};
+            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}, {"V", &V}};
 
         for (const auto& row : data) {
             if (row.size() != 2)
@@ -72,5 +64,7 @@ struct Config {
             throw std::invalid_argument("N");
         if (P == 0 || P > N || P > util::calcPower(Q, T))
             throw std::invalid_argument("P");
+        if (V == 0)
+            throw std::invalid_argument("V");
     }
 };

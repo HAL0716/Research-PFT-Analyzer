@@ -176,7 +176,8 @@ namespace {
     }
 
     void writeCSV(const std::set<ProductSet>& res, const Config& cfg) {
-        auto csv = util::createFile(cfg.toPath());
+        const auto csvPath = cfg.toPath("step1");
+        auto csv = util::createFile(csvPath);
         for (const auto& ps : res) {
             std::set<std::string> row;
             for (const auto& p : ps) {
@@ -187,13 +188,13 @@ namespace {
             }
             csv << util::join(row, ",") << std::endl;
         }
-        std::cout << cfg.toPath() << " Saved." << std::endl;
+        std::cout << csvPath << " Saved." << std::endl;
     }
 
 } // namespace
 
 int main() {
-    const Config base("step1");
+    const Config base("config.txt");
 
     const Alphabet alpha(base.Q);
     const SymbolSet symbols = genSymbols(base, alpha);

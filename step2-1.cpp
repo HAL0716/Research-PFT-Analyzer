@@ -2,6 +2,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Alphabet.hpp"
@@ -35,6 +36,20 @@ namespace {
         }
 
         return words;
+    }
+
+    std::string format(const Graph::Verts& verts, const Config& cfg) {
+        std::vector<size_t> res(cfg.L / cfg.T + 1, 0);
+
+        for (const auto& s : verts) {
+            size_t pos = s.find('+');
+            if (pos == std::string::npos)
+                pos = s.size();
+
+            res[pos / cfg.T]++;
+        }
+
+        return util::join(res, ",");
     }
 
     auto readCSV(const Config& cfg) {
@@ -82,9 +97,9 @@ namespace {
             std::vector<std::string> resultRow;
 
             graph.set(toWords(ps));
-            resultRow.push_back(std::to_string(graph.getV().size()));
+            resultRow.push_back(format(graph.getV(), cfg));
             graph.minimize();
-            resultRow.push_back(std::to_string(graph.getV().size()));
+            resultRow.push_back(format(graph.getV(), cfg));
 
             csv << util::join(resultRow, ",") << std::endl;
         }

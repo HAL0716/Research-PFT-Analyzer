@@ -57,10 +57,11 @@ namespace {
             std::vector<std::string> row;
 
             analyzer.set(ps);
-            std::vector<std::string> res;
+            std::vector<std::string> resultRow;
             for (const auto& b : analyzer.getResult())
-                res.push_back(b ? "T" : "F");
-            csv << util::join(res, ",") << std::endl;
+                resultRow.push_back(b ? "T" : "F");
+
+            csv << util::join(resultRow, ",") << std::endl;
         }
         std::cout << cfg.toPath() << " Saved." << std::endl;
     }

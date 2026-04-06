@@ -78,12 +78,14 @@ namespace {
         for (const auto& ps : res) {
             Logger::progress(++cnt, total, "Graph Generation: ", true);
 
-            std::vector<std::string> row;
+            std::vector<std::string> resultRow;
 
             graph.set(toWords(ps));
-            csv << graph.getV().size() << ",";
+            resultRow.push_back(std::to_string(graph.getV().size()));
             graph.minimize();
-            csv << graph.getV().size() << std::endl;
+            resultRow.push_back(std::to_string(graph.getV().size()));
+
+            csv << util::join(resultRow, ",") << std::endl;
         }
         std::cout << cfg.toPath() << " Saved." << std::endl;
     }

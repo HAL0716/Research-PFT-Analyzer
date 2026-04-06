@@ -45,7 +45,7 @@ struct Config {
     }
 
     void set(const std::string& path) {
-        auto data = util::readCSV(path);
+        auto data = util::readCSV(path, util::FileErrorPolicy::THROW);
 
         const std::unordered_map<std::string, size_t*> table = {
             {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}};

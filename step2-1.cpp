@@ -44,6 +44,10 @@ namespace {
     auto readCSV(const Config& cfg) {
         const auto csv = util::readCSV(cfg.toPath(true));
         std::vector<ProductSet> result;
+
+        if (csv.empty())
+            return result;
+
         for (const auto& row : csv) {
             if (row.size() != cfg.L / cfg.T * cfg.P)
                 throw std::runtime_error("invalid row size");
@@ -91,7 +95,7 @@ namespace {
 } // namespace
 
 int main() {
-    const Config base("step1", "step2");
+    const Config base("step1", "step2-1");
 
     const size_t maxN = util::calcPower(base.Q, base.L);
     for (size_t N = 1; N <= maxN; ++N) {
@@ -100,7 +104,9 @@ int main() {
 
         const auto cfg = base.withN(N);
         auto data = readCSV(cfg);
-        writeCSV(data, cfg);
+
+        if (!data.empty())
+            writeCSV(data, cfg);
     }
 
     return 0;

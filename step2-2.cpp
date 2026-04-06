@@ -9,6 +9,7 @@
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "util/util.hpp"
+#include "Analysis/Engine.hpp"
 
 using Symbol = std::string;
 using SymbolSet = std::set<Symbol>;
@@ -51,7 +52,7 @@ namespace {
 
     void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
         const auto alpha = Alphabet(cfg.Q);
-        auto analyzer = Analyzer(cfg, alpha);
+        auto analyzer = Analysis::Engine(cfg, alpha);
 
         auto csv = util::createFile(cfg.toPath());
         size_t cnt = 0, total = res.size();

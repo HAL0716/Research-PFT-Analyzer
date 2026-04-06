@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Analysis/Strategy.hpp"
+#include "util/util.hpp"
 
 namespace Analysis {
     class L4_T1_P1 : public Strategy {

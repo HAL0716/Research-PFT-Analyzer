@@ -8,10 +8,8 @@
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
+#include "Types.hpp"
 #include "util/util.hpp"
-
-using Symbol = std::string;
-using SymbolSet = std::set<Symbol>;
 
 class Graph {
   public:

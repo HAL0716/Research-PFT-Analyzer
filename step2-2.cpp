@@ -60,7 +60,7 @@ namespace {
             analyzer.set(ps);
             std::vector<std::string> res;
             for (const auto& b : analyzer.getResult())
-                res.push_back(b ? "1" : "0");
+                res.push_back(b ? "T" : "F");
             csv << util::join(res, ",") << std::endl;
         }
         std::cout << cfg.toPath() << " Saved." << std::endl;

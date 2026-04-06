@@ -1,7 +1,8 @@
 #include <iostream>
 #include <set>
 #include <string>
-#include <unordered_map>
+#include <map>
+#include <vector>
 
 #include "Config.hpp"
 #include "Logger.hpp"
@@ -9,7 +10,7 @@
 
 namespace {
 
-    using recordMap = std::unordered_map<std::string, std::set<size_t>>;
+    using recordMap = std::map<std::string, std::set<size_t>>;
 
     auto readCSV(const Config& cfg, recordMap& result) {
         const auto csv1 = util::readCSV(cfg.toPath("step2-1"));

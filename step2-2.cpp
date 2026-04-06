@@ -6,7 +6,6 @@
 
 #include "Alphabet.hpp"
 #include "Analysis/Engine.hpp"
-#include "Analyzer.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "Types.hpp"

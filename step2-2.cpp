@@ -8,43 +8,44 @@
 #include "Analysis/Engine.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
+#include "Transform.hpp"
 #include "Types.hpp"
 #include "util/util.hpp"
-#include "Transform.hpp"
 
 namespace {
 
-    auto readCSV(const Config& cfg) {
-        const auto csv = util::readCSV(cfg.toPath("step1"));
-        std::vector<ProductSet> result;
-
-        if (csv.empty())
-            return result;
-
-        for (const auto& row : csv)
-            result.push_back(Transform::toProductSet(row, cfg));
-
-        return result;
+    auto parseCSV(const util::csvData& data, const Config& cfg) {
+        std::vector<ProductSet> res;
+        for (const auto& row : data)
+            res.push_back(Transform::toProductSet(row, cfg));
+        return res;
     }
 
-    void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
+    auto analyze(const std::vector<ProductSet>& data, const Config& cfg) {
+        auto format = [](const std::vector<bool>& result) -> std::string {
+            std::vector<std::string> res;
+            for (bool b : result)
+                res.push_back(b ? "T" : "F");
+            return util::join(res, ",");
+        };
+
         const auto alpha = Alphabet(cfg.Q);
         auto analyzer = Analysis::Engine(cfg, alpha);
 
-        const auto csvPath = cfg.toPath("step2-2");
-        auto csv = util::createFile(csvPath);
-        size_t cnt = 0, total = res.size();
-        for (const auto& ps : res) {
-            Logger::progress(++cnt, total, "Analysis: ", true);
+        util::csvData res;
+
+        size_t cnt = 0, total = data.size();
+        for (const auto& ps : data) {
+            Logger::progress(++cnt, total, "Processing: ", true);
+
+            std::vector<std::string> resRow;
 
             analyzer.set(ps);
-            std::vector<std::string> resultRow;
-            for (const auto& b : analyzer.getResult())
-                resultRow.push_back(b ? "T" : "F");
+            resRow.push_back(format(analyzer.getResult()));
 
-            csv << util::join(resultRow, ",") << std::endl;
+            res.push_back(std::move(resRow));
         }
-        std::cout << csvPath << " Saved." << std::endl;
+        return res;
     }
 
 } // namespace
@@ -58,10 +59,16 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
-        auto data = readCSV(cfg);
 
-        if (!data.empty())
-            writeCSV(data, cfg);
+        const auto csvRaw = util::readCSV(cfg.toPath("step1"));
+        if (csvRaw.empty())
+            continue;
+
+        const auto csvParsed = parseCSV(csvRaw, cfg);
+
+        const auto res = analyze(csvParsed, cfg);
+
+        util::writeCSV(cfg.toPath("step2-2"), res);
     }
 
     return 0;

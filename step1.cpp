@@ -1,6 +1,7 @@
 #include <iostream>
 #include <set>
 #include <vector>
+#include <filesystem>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
@@ -170,6 +171,8 @@ namespace {
 } // namespace
 
 int main() {
+    const bool UPDATE = false;
+
     const Config base("config.txt");
 
     const Alphabet alpha(base.Q);
@@ -181,6 +184,10 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
+
+        if (std::filesystem::exists(cfg.toPath("step1")) && !UPDATE)
+            continue;
+
         const Validator validate(cfg, alpha, symbols);
         const auto products = genProductSet(cfg, symbols, validate);
 

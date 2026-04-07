@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
@@ -59,6 +60,8 @@ namespace {
 } // namespace
 
 int main() {
+    const bool UPDATE = false;
+
     const Config base("config.txt");
 
     const size_t maxN = util::calcPower(base.Q, base.L);
@@ -67,6 +70,9 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
+
+        if (std::filesystem::exists(cfg.toPath("step2-1")) && !UPDATE)
+            continue;
 
         const auto csvRaw = util::readCSV(cfg.toPath("step1"));
         if (csvRaw.empty())

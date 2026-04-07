@@ -17,28 +17,8 @@ namespace {
 
     auto parseCSV(const util::csvData& data, const Config& cfg) {
         std::vector<ProductSet> res;
-
-        for (const auto& row : data) {
-            if (row.size() != cfg.L / cfg.T * cfg.P)
-                throw std::runtime_error("invalid row size");
-
-            ProductSet ps;
-            for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
-                Product p;
-                for (size_t j = 0; j < cfg.L / cfg.T; ++j) {
-                    SymbolSet ss;
-                    std::stringstream ssStream(row[i + j]);
-                    std::string sym;
-
-                    while (std::getline(ssStream, sym, '-'))
-                        ss.insert(sym);
-
-                    p.push_back(std::move(ss));
-                }
-                ps.insert(std::move(p));
-            }
-            res.push_back(std::move(ps));
-        }
+        for (const auto& row : data)
+            res.push_back(Transform::toProductSet(row, cfg));
         return res;
     }
 

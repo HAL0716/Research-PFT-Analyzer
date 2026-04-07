@@ -10,6 +10,7 @@
 #include "Logger.hpp"
 #include "Types.hpp"
 #include "util/util.hpp"
+#include "Transform.hpp"
 
 namespace {
 
@@ -20,27 +21,8 @@ namespace {
         if (csv.empty())
             return result;
 
-        for (const auto& row : csv) {
-            if (row.size() != cfg.L / cfg.T * cfg.P)
-                throw std::runtime_error("invalid row size");
-
-            ProductSet ps;
-            for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
-                Product p;
-                for (size_t j = 0; j < cfg.L / cfg.T; ++j) {
-                    SymbolSet ss;
-                    std::stringstream ssStream(row[i + j]);
-                    std::string sym;
-
-                    while (std::getline(ssStream, sym, '-'))
-                        ss.insert(sym);
-
-                    p.push_back(std::move(ss));
-                }
-                ps.insert(std::move(p));
-            }
-            result.push_back(std::move(ps));
-        }
+        for (const auto& row : csv)
+            result.push_back(Transform::toProductSet(row, cfg));
 
         return result;
     }

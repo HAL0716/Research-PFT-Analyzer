@@ -1,9 +1,12 @@
 #pragma once
 
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "Config.hpp"
 #include "Types.hpp"
 
 namespace Transform {
@@ -33,6 +36,28 @@ namespace Transform {
             auto tmp = expand(p);
             for (auto& v : tmp)
                 res.insert(std::move(v));
+        }
+        return res;
+    }
+
+    auto toProductSet(const util::csvRow& row, const Config& cfg) {
+        if (row.size() != cfg.L / cfg.T)
+            throw std::invalid_argument("invalid row size");
+
+        ProductSet res;
+        for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
+            Product p;
+            for (size_t j = 0; j < cfg.L / cfg.T; ++j) {
+                SymbolSet ss;
+                std::stringstream ssStream(row[i + j]);
+                std::string sym;
+
+                while (std::getline(ssStream, sym, '-'))
+                    ss.insert(sym);
+
+                p.push_back(std::move(ss));
+            }
+            res.insert(std::move(p));
         }
         return res;
     }

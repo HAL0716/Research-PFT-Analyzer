@@ -13,7 +13,8 @@
 namespace util {
     namespace fs = std::filesystem;
 
-    using csvData = std::vector<std::vector<std::string>>;
+    using csvRow = std::vector<std::string>;
+    using csvData = std::vector<csvRow>;
 
     inline std::ofstream createFile(const std::string& path) {
         fs::path fs_path(path);

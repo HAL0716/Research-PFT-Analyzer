@@ -12,8 +12,6 @@ namespace {
 
     void analyze(const std::string& label, const util::csvData& data, recordMap& res) {
         for (size_t i = 0; i < data.size(); ++i) {
-            Logger::progress(i + 1, data.size(), label, true);
-
             const auto key = util::join(data[i], ",");
             res.emplace(key, label + "_" + std::to_string(i + 1));
         }
@@ -36,6 +34,8 @@ int main() {
     const size_t maxN = util::calcPower(base.Q, base.L);
 
     for (size_t N = base.P; N <= maxN; ++N) {
+        Logger::progress(N, maxN, "Analyzing N: ", true);
+
         const auto cfg = base.withN(N);
         const auto data = util::readCSV(cfg.toPath("step2-1"));
 
@@ -45,7 +45,7 @@ int main() {
         analyze("N=" + std::to_string(N), data, res);
     }
 
-    util::writeCSV(base.toPath("step3", false), format(res));
+    util::writeCSV(base.toPath("step3-1", false), format(res));
 
     return 0;
 }

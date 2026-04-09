@@ -40,6 +40,8 @@ namespace Transform {
         return res;
     }
 
+    constexpr char SYMBOL_DELIM = '-';
+
     auto toProductSet(const util::csvRow& row, const Config& cfg) {
         if (row.size() != cfg.L / cfg.T)
             throw std::invalid_argument("invalid row size");
@@ -52,7 +54,7 @@ namespace Transform {
                 std::stringstream ssStream(row[i + j]);
                 std::string sym;
 
-                while (std::getline(ssStream, sym, '-'))
+                while (std::getline(ssStream, sym, SYMBOL_DELIM))
                     ss.insert(sym);
 
                 p.push_back(std::move(ss));
@@ -60,6 +62,29 @@ namespace Transform {
             res.insert(std::move(p));
         }
         return res;
+    }
+
+    auto toCsvRow(const ProductSet& ps, const Config& cfg) {
+        util::csvRow row;
+
+        for (const auto& p : ps) {
+            if (p.size() != cfg.L / cfg.T)
+                throw std::invalid_argument("invalid product size");
+
+            for (const auto& ss : p) {
+                std::ostringstream oss;
+
+                for (auto it = ss.begin(); it != ss.end(); ++it) {
+                    if (it != ss.begin())
+                        oss << SYMBOL_DELIM;
+                    oss << *it;
+                }
+
+                row.push_back(oss.str());
+            }
+        }
+
+        return row;
     }
 
 } // namespace Transform

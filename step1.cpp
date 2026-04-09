@@ -154,13 +154,7 @@ namespace {
         const auto csvPath = cfg.toPath("step1");
         auto csv = util::createFile(csvPath);
         for (const auto& ps : res) {
-            std::set<std::string> row;
-            for (const auto& p : ps) {
-                std::vector<std::string> parts;
-                for (const auto& ss : p)
-                    parts.push_back(util::join(ss, "-"));
-                row.insert(util::join(parts, ","));
-            }
+            const auto row = Transform::toCsvRow(ps, cfg);
             csv << util::join(row, ",") << std::endl;
         }
         std::cout << csvPath << " Saved." << std::endl;

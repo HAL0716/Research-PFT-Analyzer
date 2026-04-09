@@ -125,10 +125,9 @@ namespace {
     }
 
     auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
+        auto csv = util::createFile(cfg.toPath("step1"));
+
         const auto base = genBluePrint(cfg, symbols);
-
-        std::vector<ProductSet> result;
-
         size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
             Logger::progress(++cnt, total, "Generating N = " + std::to_string(cfg.N) + ": ", true);
@@ -144,20 +143,8 @@ namespace {
 
             for (const auto& ps : util::Product::asSet(candidates))
                 if (isValid(ps))
-                    result.push_back(ps);
+                    csv << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
         }
-
-        return result;
-    }
-
-    void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
-        const auto csvPath = cfg.toPath("step1");
-        auto csv = util::createFile(csvPath);
-        for (const auto& ps : res) {
-            const auto row = Transform::toCsvRow(ps, cfg);
-            csv << util::join(row, ",") << std::endl;
-        }
-        std::cout << csvPath << " Saved." << std::endl;
     }
 
 } // namespace
@@ -179,10 +166,7 @@ int main() {
             continue;
 
         const Validator validate(cfg, alpha, symbols);
-        const auto products = genProductSet(cfg, symbols, validate);
-
-        if (!products.empty())
-            writeCSV(products, cfg);
+        genProductSet(cfg, symbols, validate);
     }
 
     return 0;

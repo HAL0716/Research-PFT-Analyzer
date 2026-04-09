@@ -42,7 +42,7 @@ namespace {
 
         size_t cnt = 0, total = data.size();
         for (const auto& ps : data) {
-            Logger::progress(++cnt, total, "Processing: ", true);
+            Logger::progress(++cnt, total, "Processing N = " + std::to_string(cfg.N) + ": ", true);
 
             std::vector<std::string> resRow;
 

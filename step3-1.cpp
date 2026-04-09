@@ -46,7 +46,7 @@ int main() {
     const size_t maxN = util::calcPower(base.Q, base.L);
 
     for (size_t N = base.P; N <= maxN; ++N) {
-        Logger::progress(N, maxN, "Analyzing N: ", true);
+        Logger::progress(N, maxN, "Analyzing N = " + std::to_string(N) + ": ", true);
 
         const auto cfg = base.withN(N);
         const auto data = util::readCSV(cfg.toPath("step2-1"));

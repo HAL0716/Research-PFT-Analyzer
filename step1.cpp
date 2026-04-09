@@ -1,10 +1,12 @@
 #include <iostream>
 #include <set>
 #include <vector>
+#include <filesystem>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
+#include "Transform.hpp"
 #include "Types.hpp"
 #include "util/util.hpp"
 
@@ -18,31 +20,6 @@ namespace {
             symbols.insert(alpha.toSymbol(i, cfg.T));
 
         return symbols;
-    }
-
-    SymbolSet expand(const Product& p) {
-        SymbolSet res{""};
-
-        for (const auto& ss : p) {
-            SymbolSet next;
-            for (const auto& prefix : res)
-                for (const auto& s : ss)
-                    next.insert(prefix + s);
-            res.swap(next);
-        }
-
-        return res;
-    }
-
-    SymbolSet toWords(const ProductSet& ps) {
-        SymbolSet words;
-
-        for (const auto& p : ps) {
-            auto expanded = expand(p);
-            words.insert(expanded.begin(), expanded.end());
-        }
-
-        return words;
     }
 
     Product applyMap(const Product& p, const Alphabet& alpha, const Symbol& map) {
@@ -120,9 +97,9 @@ namespace {
         bool hasMappingInvariance(const ProductSet& ps) const {
             std::set<SymbolSet> mappedWords;
             for (const auto& m : symbols_)
-                mappedWords.insert(toWords(applyMap(ps, alpha_, m)));
+                mappedWords.insert(Transform::toWords(applyMap(ps, alpha_, m)));
 
-            return toWords(ps) == *mappedWords.begin();
+            return Transform::toWords(ps) == *mappedWords.begin();
         }
     };
 
@@ -194,6 +171,8 @@ namespace {
 } // namespace
 
 int main() {
+    const bool UPDATE = false;
+
     const Config base("config.txt");
 
     const Alphabet alpha(base.Q);
@@ -205,6 +184,10 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
+
+        if (std::filesystem::exists(cfg.toPath("step1")) && !UPDATE)
+            continue;
+
         const Validator validate(cfg, alpha, symbols);
         const auto products = genProductSet(cfg, symbols, validate);
 

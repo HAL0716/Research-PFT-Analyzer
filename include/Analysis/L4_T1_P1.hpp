@@ -45,20 +45,20 @@ namespace Analysis {
         }
 
         void evaluate(const Product& prod, const Context& ctx, std::vector<bool>& result) {
-            // --- prod1 ---
+            // --- prod0 ---
             add(result,
                 ctx.p1c.empty(),
                 prod[0] == ctx.p1c,
                 disjoint(prod[0], ctx.p1c));
 
-            // --- prod2 ---
+            // --- prod1 ---
             add(result,
                 ctx.p2c.empty(),
                 ctx.s01 == ctx.s12,
                 prod[0] == ctx.p2c && disjoint(ctx.s01, ctx.s12),
                 disjoint(prod[0], ctx.p2c) && disjoint(ctx.s01, ctx.s12));
 
-            // --- prod3 ---
+            // --- prod2 ---
             add(result,
                 ctx.p3c.empty(),
                 ctx.s012 == ctx.s123,

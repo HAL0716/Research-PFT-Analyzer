@@ -2,13 +2,19 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "util/string.hpp"
+
 namespace util {
     namespace fs = std::filesystem;
+
+    using csvRow = std::vector<std::string>;
+    using csvData = std::vector<csvRow>;
 
     inline std::ofstream createFile(const std::string& path) {
         fs::path fs_path(path);
@@ -36,7 +42,7 @@ namespace util {
 
     inline auto readCSV(const std::string& path, FileErrorPolicy policy = FileErrorPolicy::RETURN_EMPTY) {
         auto ifs = openFile(path, policy);
-        std::vector<std::vector<std::string>> data;
+        csvData data;
 
         if (!ifs && policy == FileErrorPolicy::RETURN_EMPTY)
             return data;
@@ -44,7 +50,7 @@ namespace util {
         std::string line;
 
         while (std::getline(ifs, line)) {
-            std::vector<std::string> row;
+            csvData::value_type row;
             std::stringstream ss(line);
             std::string cell;
 
@@ -56,6 +62,15 @@ namespace util {
         }
 
         return data;
+    }
+
+    inline void writeCSV(const std::string& path, const csvData& data) {
+        auto ofs = createFile(path);
+
+        for (const auto& row : data)
+            ofs << util::join(row, ",") << "\n";
+
+        std::cout << path << " saved." << std::endl;
     }
 
 } // namespace util

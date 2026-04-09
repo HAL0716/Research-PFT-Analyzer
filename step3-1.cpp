@@ -1,7 +1,7 @@
 #include <iostream>
+#include <map>
 #include <set>
 #include <string>
-#include <map>
 #include <vector>
 
 #include "Config.hpp"
@@ -10,42 +10,26 @@
 
 namespace {
 
-    using recordMap = std::map<std::string, std::set<size_t>>;
+    using recordMap = std::map<std::string, std::string>;
 
-    auto readCSV(const Config& cfg, recordMap& result) {
-        const auto csv1 = util::readCSV(cfg.toPath("step2-1"));
-        const auto csv2 = util::readCSV(cfg.toPath("step2-2"));
+    auto analyze(const std::string& label, const util::csvData& data, recordMap& res) {
+        for (size_t i = 0; i < data.size(); ++i) {
+            Logger::progress(i + 1, data.size(), label, true);
 
-        if (csv1.empty() || csv2.empty() || csv1.size() != csv2.size())
-            return result;
+            const auto key = util::join(data[i], ",");
+            const auto value = label + "_" + std::to_string(i + 1);
 
-        for (size_t i = 0; i < csv1.size(); ++i) {
-            const auto& row1 = csv1[i];
-            const auto& row2 = csv2[i];
-
-            const auto key = util::join(row2, ",");
-            const auto value = std::stoul(row1[1]);
-
-            result[key].insert(value);
+            if (res.find(key) == res.end())
+                res[key] = value;
         }
-
-        return result;
+        return res;
     }
 
-    void writeCSV(const recordMap& res, const Config& cfg) {
-        const auto csvPath = cfg.toPath("step3", false);
-        auto csv = util::createFile(csvPath);
-        size_t cnt = 0, total = res.size();
-        for (const auto& pair : res) {
-            Logger::progress(++cnt, total, "Processing: ", true);
-
-            std::vector<std::string> resultRow;
-            resultRow.push_back(pair.first);
-            resultRow.push_back(util::join(pair.second, ","));
-
-            csv << util::join(resultRow, ",") << std::endl;
-        }
-        std::cout << csvPath << " Saved." << std::endl;
+    auto format(const recordMap& data) {
+        util::csvData res;
+        for (const auto& [key, value] : data)
+            res.push_back({key, value});
+        return res;
     }
 
 } // namespace
@@ -61,11 +45,17 @@ int main() {
             continue;
 
         const auto cfg = base.withN(N);
-        readCSV(cfg, data);
+
+        const auto csvRaw = util::readCSV(cfg.toPath("step2-1"));
+        if (csvRaw.empty())
+            continue;
+
+        const auto label = "N=" + std::to_string(N);
+
+        analyze(label, csvRaw, data);
     }
 
-    if (!data.empty())
-        writeCSV(data, base);
+    util::writeCSV(base.toPath("step3", false), format(data));
 
     return 0;
 }

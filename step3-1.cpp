@@ -1,6 +1,7 @@
-#include <iostream>
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
 
 #include "Config.hpp"
 #include "Logger.hpp"
@@ -8,19 +9,28 @@
 
 namespace {
 
-    using recordMap = std::map<std::string, std::string>;
+    using recordMap = std::map<std::string, std::set<std::string>>;
 
-    void analyze(const std::string& label, const util::csvData& data, recordMap& res) {
-        for (size_t i = 0; i < data.size(); ++i) {
-            const auto key = util::join(data[i], ",");
-            res.emplace(key, label + "_" + std::to_string(i + 1));
+    void analyze(const util::csvData& data, const Config& cfg, recordMap& res) {
+        const size_t split = cfg.L / cfg.T + 1;
+
+        for (const auto& row : data) {
+            std::vector<std::string> first(row.begin(), row.begin() + split);
+            std::vector<std::string> second(row.begin() + split, row.end());
+
+            auto [it, inserted] = res.try_emplace(std::to_string(cfg.N) + ":" + util::join(first, "-"));
+            it->second.insert(util::join(second, "-"));
         }
     }
 
     util::csvData format(const recordMap& data) {
         util::csvData res;
-        for (const auto& [key, value] : data)
-            res.push_back({key, value});
+        for (const auto& [key, value] : data) {
+            std::vector<std::string> row = {key};
+            for (const auto& v : value)
+                row.push_back(v);
+            res.push_back(row);
+        }
         return res;
     }
 
@@ -42,7 +52,7 @@ int main() {
         if (data.empty())
             continue;
 
-        analyze("N=" + std::to_string(N), data, res);
+        analyze(data, cfg, res);
     }
 
     util::writeCSV(base.toPath("step3-1", false), format(res));

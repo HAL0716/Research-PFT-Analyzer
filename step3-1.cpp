@@ -9,7 +9,8 @@
 
 namespace {
 
-    using recordMap = std::map<std::string, std::set<std::string>>;
+    using recordKey = std::pair<size_t, std::string>;
+    using recordMap = std::map<recordKey, std::set<std::string>>;
 
     void analyze(const util::csvData& data, const Config& cfg, recordMap& res) {
         const size_t split = cfg.L / cfg.T + 1;
@@ -18,7 +19,8 @@ namespace {
             std::vector<std::string> first(row.begin(), row.begin() + split);
             std::vector<std::string> second(row.begin() + split, row.end());
 
-            auto [it, inserted] = res.try_emplace(std::to_string(cfg.N) + ":" + util::join(first, "-"));
+            auto key = recordKey{cfg.N, util::join(first, "-")};
+            auto [it, inserted] = res.try_emplace(key);
             it->second.insert(util::join(second, "-"));
         }
     }
@@ -26,7 +28,7 @@ namespace {
     util::csvData format(const recordMap& data) {
         util::csvData res;
         for (const auto& [key, value] : data) {
-            std::vector<std::string> row = {key};
+            std::vector<std::string> row = {key.second};
             for (const auto& v : value)
                 row.push_back(v);
             res.push_back(row);

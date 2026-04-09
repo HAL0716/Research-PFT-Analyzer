@@ -127,17 +127,15 @@ namespace {
     auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
         const auto base = genBluePrint(cfg, symbols);
 
-        std::set<ProductSet> result;
+        std::vector<ProductSet> result;
 
         size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
             Logger::progress(++cnt, total, "Generating candidates: ", true);
 
             std::vector<ProductSet> candidates;
-
             for (const auto& pattern : group) {
                 std::vector<std::set<SymbolSet>> combs;
-
                 for (auto n : pattern)
                     combs.push_back(util::Combinatorics::combs(symbols, n));
 
@@ -146,13 +144,13 @@ namespace {
 
             for (const auto& ps : util::Product::asSet(candidates))
                 if (isValid(ps))
-                    result.insert(ps);
+                    result.push_back(ps);
         }
 
         return result;
     }
 
-    void writeCSV(const std::set<ProductSet>& res, const Config& cfg) {
+    void writeCSV(const std::vector<ProductSet>& res, const Config& cfg) {
         const auto csvPath = cfg.toPath("step1");
         auto csv = util::createFile(csvPath);
         for (const auto& ps : res) {
@@ -179,9 +177,7 @@ int main() {
     const SymbolSet symbols = genSymbols(base, alpha);
 
     const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = 1; N <= maxN; ++N) {
-        if (N < base.P)
-            continue;
+    for (size_t N = base.P; N <= maxN; ++N) {
 
         const auto cfg = base.withN(N);
 

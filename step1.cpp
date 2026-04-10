@@ -125,9 +125,12 @@ namespace {
     }
 
     auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
+        const auto base = genBluePrint(cfg, symbols);
+        if (base.empty())
+            return;
+
         auto csv = util::createFile(cfg.toPath("step1"));
 
-        const auto base = genBluePrint(cfg, symbols);
         size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
             Logger::progress(++cnt, total, "Generating N = " + std::to_string(cfg.N) + ": ", true);

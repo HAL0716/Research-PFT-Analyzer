@@ -87,4 +87,8 @@ namespace Transform {
         return row;
     }
 
+    auto toWords(const util::csvRow& row, const Config& cfg) {
+        return toWords(toProductSet(row, cfg));
+    }
+
 } // namespace Transform

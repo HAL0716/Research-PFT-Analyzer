@@ -1,3 +1,5 @@
+#include <atomic>
+#include <csignal>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -12,13 +14,33 @@
 
 namespace {
 
+    std::atomic<bool> g_interrupted = false;
+
+    void onSigint(int) {
+        g_interrupted = true;
+    }
+
+    struct OutputGuard {
+        std::string path;
+        bool success = false;
+
+        ~OutputGuard() {
+            if (!success && std::filesystem::exists(path))
+                std::filesystem::remove(path);
+        }
+    };
+
     void processRows(const util::csvData& rows, std::ofstream& out, const Config& cfg) {
         Alphabet alphabet(cfg.Q);
         Analysis::Engine engine(cfg, alphabet);
 
-        size_t cnt = 0, total = rows.size();
-        std::string label = "Processing N = " + std::to_string(cfg.N) + " : ";
+        size_t cnt = 0;
+        const size_t total = rows.size();
+        const std::string label = "Processing N = " + std::to_string(cfg.N) + " : ";
         for (const auto& row : rows) {
+            if (g_interrupted)
+                throw std::runtime_error("Interrupted");
+
             Logger::progress(++cnt, total, label, true);
 
             engine.set(Transform::toProductSet(row, cfg));
@@ -35,6 +57,8 @@ namespace {
 } // namespace
 
 int main() {
+    std::signal(SIGINT, onSigint);
+
     constexpr bool kUpdate = false;
 
     const Config baseConfig("config.txt");
@@ -50,9 +74,25 @@ int main() {
         if (rows.empty())
             continue;
 
-        auto outFile = util::createFile(cfg.toPath("step2-2"));
+        const auto finalPath = cfg.toPath("step2-2");
+        const auto tmpPath = finalPath + ".tmp";
 
-        processRows(rows, outFile, cfg);
+        auto outFile = util::createFile(tmpPath);
+        OutputGuard guard{tmpPath};
+
+        try {
+            processRows(rows, outFile, cfg);
+
+            outFile.close();
+
+            std::filesystem::rename(tmpPath, finalPath);
+
+            guard.success = true;
+        } catch (const std::runtime_error& e) {
+            if (std::string(e.what()) == "Interrupted")
+                return 0;
+            throw;
+        }
     }
 
     return 0;

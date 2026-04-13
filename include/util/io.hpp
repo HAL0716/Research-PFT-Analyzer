@@ -73,4 +73,37 @@ namespace util {
         std::cout << path << " saved." << std::endl;
     }
 
+    class SafeOutput {
+      public:
+        explicit SafeOutput(const std::string& finalPath) : finalPath_(finalPath), tmpPath_(finalPath + ".tmp"), ofs_(createFile(tmpPath_)) {
+        }
+
+        std::ofstream& stream() {
+            return ofs_;
+        }
+
+        void commit() {
+            ofs_.close();
+
+            if (fs::exists(finalPath_))
+                fs::remove(finalPath_);
+
+            fs::rename(tmpPath_, finalPath_);
+            committed_ = true;
+        }
+
+        ~SafeOutput() {
+            if (!committed_) {
+                std::error_code ec;
+                fs::remove(tmpPath_, ec);
+            }
+        }
+
+      private:
+        std::string finalPath_;
+        std::string tmpPath_;
+        std::ofstream ofs_;
+        bool committed_ = false;
+    };
+
 } // namespace util

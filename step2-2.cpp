@@ -1,7 +1,4 @@
-#include <atomic>
-#include <csignal>
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -14,32 +11,16 @@
 
 namespace {
 
-    std::atomic<bool> g_interrupted = false;
-
-    void onSigint(int) {
-        g_interrupted = true;
-    }
-
-    struct OutputGuard {
-        std::string path;
-        bool success = false;
-
-        ~OutputGuard() {
-            if (!success && std::filesystem::exists(path))
-                std::filesystem::remove(path);
-        }
-    };
-
-    void processRows(const util::csvData& rows, std::ofstream& out, const Config& cfg) {
+    void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
         Alphabet alphabet(cfg.Q);
         Analysis::Engine engine(cfg, alphabet);
 
         size_t cnt = 0;
         const size_t total = rows.size();
         const std::string label = "Processing N = " + std::to_string(cfg.N) + " : ";
+
         for (const auto& row : rows) {
-            if (g_interrupted)
-                throw std::runtime_error("Interrupted");
+            util::checkInterrupted();
 
             Logger::progress(++cnt, total, label, true);
 
@@ -57,9 +38,9 @@ namespace {
 } // namespace
 
 int main() {
-    std::signal(SIGINT, onSigint);
+    util::setupSignalHandler();
 
-    constexpr bool kUpdate = false;
+    constexpr bool Update = false;
 
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
@@ -67,27 +48,19 @@ int main() {
     for (size_t n = baseConfig.P; n <= maxN; ++n) {
         const Config cfg = baseConfig.withN(n);
 
-        if (shouldSkip(cfg, kUpdate))
+        if (shouldSkip(cfg, Update))
             continue;
 
         const auto rows = util::readCSV(cfg.toPath("step1"));
         if (rows.empty())
             continue;
 
-        const auto finalPath = cfg.toPath("step2-2");
-        const auto tmpPath = finalPath + ".tmp";
-
-        auto outFile = util::createFile(tmpPath);
-        OutputGuard guard{tmpPath};
+        util::SafeOutput out(cfg.toPath("step2-2"));
 
         try {
-            processRows(rows, outFile, cfg);
+            processRows(rows, out.stream(), cfg);
 
-            outFile.close();
-
-            std::filesystem::rename(tmpPath, finalPath);
-
-            guard.success = true;
+            out.commit();
         } catch (const std::runtime_error& e) {
             if (std::string(e.what()) == "Interrupted")
                 return 0;

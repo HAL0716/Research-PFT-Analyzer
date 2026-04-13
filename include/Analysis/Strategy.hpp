@@ -9,6 +9,6 @@ namespace Analysis {
       public:
         virtual ~Strategy() = default;
 
-        virtual std::vector<bool> analyze(const Config& cfg, const Alphabet& alpha, const ProductSet& prodSet) = 0;
+        virtual std::vector<std::string> analyze(const Config& cfg, const Alphabet& alpha, const ProductSet& prodSet) = 0;
     };
 } // namespace Analysis

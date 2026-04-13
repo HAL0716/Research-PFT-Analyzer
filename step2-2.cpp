@@ -1,7 +1,5 @@
 #include <filesystem>
-#include <iostream>
-#include <set>
-#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -10,71 +8,51 @@
 #include "Config.hpp"
 #include "Logger.hpp"
 #include "Transform.hpp"
-#include "Types.hpp"
 #include "util/util.hpp"
 
 namespace {
 
-    auto parseCSV(const util::csvData& data, const Config& cfg) {
-        std::vector<ProductSet> res;
-        for (const auto& row : data)
-            res.push_back(Transform::toProductSet(row, cfg));
-        return res;
+    void processRows(const util::csvData& rows, std::ofstream& out, const Config& cfg) {
+        Alphabet alphabet(cfg.Q);
+        Analysis::Engine engine(cfg, alphabet);
+
+        size_t cnt = 0, total = rows.size();
+        std::string label = "Processing N = " + std::to_string(cfg.N) + " : ";
+        for (const auto& row : rows) {
+            Logger::progress(++cnt, total, label, true);
+
+            engine.set(Transform::toProductSet(row, cfg));
+
+            const auto res = engine.getResult();
+            out << util::join(res, ",") << '\n';
+        }
     }
 
-    auto analyze(const std::vector<ProductSet>& data, const Config& cfg) {
-        auto format = [](const std::vector<bool>& result) -> std::string {
-            std::vector<std::string> res;
-            for (bool b : result)
-                res.push_back(b ? "T" : "F");
-            return util::join(res, ",");
-        };
-
-        const auto alpha = Alphabet(cfg.Q);
-        auto analyzer = Analysis::Engine(cfg, alpha);
-
-        util::csvData res;
-
-        size_t cnt = 0, total = data.size();
-        for (const auto& ps : data) {
-            Logger::progress(++cnt, total, "Processing N = " + std::to_string(cfg.N) + ": ", true);
-
-            std::vector<std::string> resRow;
-
-            analyzer.set(ps);
-            resRow.push_back(format(analyzer.getResult()));
-
-            res.push_back(std::move(resRow));
-        }
-        return res;
+    bool shouldSkip(const Config& cfg, bool update) {
+        return std::filesystem::exists(cfg.toPath("step2-2")) && !update;
     }
 
 } // namespace
 
 int main() {
-    const bool UPDATE = false;
+    constexpr bool kUpdate = false;
 
-    const Config base("config.txt");
+    const Config baseConfig("config.txt");
+    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = 1; N <= maxN; ++N) {
-        if (N < base.P)
+    for (size_t n = baseConfig.P; n <= maxN; ++n) {
+        const Config cfg = baseConfig.withN(n);
+
+        if (shouldSkip(cfg, kUpdate))
             continue;
 
-        const auto cfg = base.withN(N);
-
-        if (std::filesystem::exists(cfg.toPath("step2-2")) && !UPDATE)
+        const auto rows = util::readCSV(cfg.toPath("step1"));
+        if (rows.empty())
             continue;
 
-        const auto csvRaw = util::readCSV(cfg.toPath("step1"));
-        if (csvRaw.empty())
-            continue;
+        auto outFile = util::createFile(cfg.toPath("step2-2"));
 
-        const auto csvParsed = parseCSV(csvRaw, cfg);
-
-        const auto res = analyze(csvParsed, cfg);
-
-        util::writeCSV(cfg.toPath("step2-2"), res);
+        processRows(rows, outFile, cfg);
     }
 
     return 0;

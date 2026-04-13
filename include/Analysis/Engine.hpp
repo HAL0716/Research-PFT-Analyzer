@@ -4,6 +4,7 @@
 #include "Analysis/Strategy.hpp"
 
 namespace Analysis {
+
     class Engine {
       public:
         Engine(Config c, Alphabet a)
@@ -19,7 +20,7 @@ namespace Analysis {
             result = strategy_->analyze(cfg_, alpha_, prodSet);
         }
 
-        std::vector<bool> getResult() const {
+        std::vector<std::string> getResult() const {
             return result;
         }
 
@@ -27,6 +28,7 @@ namespace Analysis {
         Config cfg_;
         Alphabet alpha_;
         std::unique_ptr<Strategy> strategy_;
-        std::vector<bool> result;
+        std::vector<std::string> result;
     };
+
 } // namespace Analysis

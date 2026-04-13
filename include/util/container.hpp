@@ -35,6 +35,19 @@ namespace util {
     }
 
     template <typename Container>
+    bool isSubset(const Container& a, const Container& b) {
+        std::unordered_set<typename Container::value_type> sb;
+        sb.reserve(b.size());
+        sb.insert(b.begin(), b.end());
+
+        for (const auto& x : a)
+            if (!sb.count(x))
+                return false;
+
+        return true;
+    }
+
+    template <typename Container>
     Container difference(const Container& a, const Container& b) {
         std::unordered_set<typename Container::value_type> sb;
         sb.reserve(b.size());

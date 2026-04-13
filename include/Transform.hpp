@@ -44,7 +44,7 @@ namespace Transform {
 
     auto toProductSet(const util::csvRow& row, const Config& cfg) {
         if (row.size() != cfg.L / cfg.T)
-            throw std::invalid_argument("invalid row size");
+            throw std::invalid_argument(util::join(row, ",") + " is invalid row size");
 
         ProductSet res;
         for (size_t i = 0; i < row.size(); i += cfg.L / cfg.T) {
@@ -69,7 +69,7 @@ namespace Transform {
 
         for (const auto& p : ps) {
             if (p.size() != cfg.L / cfg.T)
-                throw std::invalid_argument("invalid product size");
+                throw std::invalid_argument(util::join(row, ",") + " is invalid product size");
 
             for (const auto& ss : p) {
                 std::ostringstream oss;

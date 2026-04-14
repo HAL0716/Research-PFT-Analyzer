@@ -23,9 +23,13 @@ struct Config {
     }
 
     std::string toPath(const std::string& dir = "", bool isIndividual = true) const {
-        std::string prefix = dir.empty() ? "" : dir + "/";
-        std::string suffix = isIndividual ? "N=" + std::to_string(N) : "All";
-        return std::format("{}/{}T={}_L={}_P={}_Q={}/{}.csv", RESULT_DIR, prefix, T, L, P, Q, suffix);
+        std::string base = RESULT_DIR;
+        if (!dir.empty())
+            base += "/" + dir;
+        if (isIndividual)
+            return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", base, T, L, P, Q, N);
+        else
+            return std::format("{}/T={}_L={}_P={}_Q={}.txt", base, T, L, P, Q);
     }
 
   private:

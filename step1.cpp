@@ -126,18 +126,18 @@ namespace {
 
     auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
         const auto base = genBluePrint(cfg, symbols);
+        if (base.empty())
+            return;
 
-        std::set<ProductSet> result;
+        auto csv = util::createFile(cfg.toPath("step1"));
 
         size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
-            Logger::progress(++cnt, total, "Generating candidates: ", true);
+            Logger::progress(++cnt, total, "Generating N = " + std::to_string(cfg.N) + ": ", true);
 
             std::vector<ProductSet> candidates;
-
             for (const auto& pattern : group) {
                 std::vector<std::set<SymbolSet>> combs;
-
                 for (auto n : pattern)
                     combs.push_back(util::Combinatorics::combs(symbols, n));
 
@@ -146,26 +146,8 @@ namespace {
 
             for (const auto& ps : util::Product::asSet(candidates))
                 if (isValid(ps))
-                    result.insert(ps);
+                    csv << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
         }
-
-        return result;
-    }
-
-    void writeCSV(const std::set<ProductSet>& res, const Config& cfg) {
-        const auto csvPath = cfg.toPath("step1");
-        auto csv = util::createFile(csvPath);
-        for (const auto& ps : res) {
-            std::set<std::string> row;
-            for (const auto& p : ps) {
-                std::vector<std::string> parts;
-                for (const auto& ss : p)
-                    parts.push_back(util::join(ss, "-"));
-                row.insert(util::join(parts, ","));
-            }
-            csv << util::join(row, ",") << std::endl;
-        }
-        std::cout << csvPath << " Saved." << std::endl;
     }
 
 } // namespace
@@ -179,9 +161,7 @@ int main() {
     const SymbolSet symbols = genSymbols(base, alpha);
 
     const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = 1; N <= maxN; ++N) {
-        if (N < base.P)
-            continue;
+    for (size_t N = base.P; N <= maxN; ++N) {
 
         const auto cfg = base.withN(N);
 
@@ -189,10 +169,7 @@ int main() {
             continue;
 
         const Validator validate(cfg, alpha, symbols);
-        const auto products = genProductSet(cfg, symbols, validate);
-
-        if (!products.empty())
-            writeCSV(products, cfg);
+        genProductSet(cfg, symbols, validate);
     }
 
     return 0;

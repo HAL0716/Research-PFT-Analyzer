@@ -1,29 +1,17 @@
-#include <iostream>
-#include <set>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
 #include <filesystem>
+#include <string>
+#include <vector>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
 #include "Graph.hpp"
 #include "Logger.hpp"
 #include "Transform.hpp"
-#include "Types.hpp"
 #include "util/util.hpp"
 
 namespace {
 
-    auto parseCSV(const util::csvData& data, const Config& cfg) {
-        std::vector<ProductSet> res;
-        for (const auto& row : data)
-            res.push_back(Transform::toProductSet(row, cfg));
-        return res;
-    }
-
-    auto analyze(const std::vector<ProductSet>& data, const Config& cfg) {
+    void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
         auto format = [](const Graph::Verts& verts, const Config& cfg) -> std::string {
             std::vector<size_t> res(cfg.L / cfg.T + 1, 0);
             for (const auto& s : verts) {
@@ -35,54 +23,62 @@ namespace {
             return util::join(res, ",");
         };
 
-        const auto alpha = Alphabet(cfg.Q);
-        auto graph = Graph(cfg, alpha);
+        Alphabet alphabet(cfg.Q);
+        Graph graph(cfg, alphabet);
 
-        util::csvData res;
+        size_t cnt = 0;
+        const size_t total = rows.size();
+        const std::string label = "Processing N = " + std::to_string(cfg.N) + " : ";
 
-        size_t cnt = 0, total = data.size();
-        for (const auto& ps : data) {
-            Logger::progress(++cnt, total, "Processing: ", true);
+        for (const auto& row : rows) {
+            util::checkInterrupted();
 
-            std::vector<std::string> resRow;
+            Logger::progress(++cnt, total, label, true);
 
-            graph.set(Transform::toWords(ps));
-            resRow.push_back(format(graph.getV(), cfg));
+            graph.set(Transform::toWords(row, cfg));
+            const auto before = graph.getV();
             graph.minimize();
-            resRow.push_back(format(graph.getV(), cfg));
+            const auto after = graph.getV();
 
-            res.push_back(std::move(resRow));
+            out << format(before, cfg) << ',' << format(after, cfg) << '\n';
         }
+    }
 
-        return res;
+    bool shouldSkip(const Config& cfg, bool update) {
+        return std::filesystem::exists(cfg.toPath("step2-1")) && !update;
     }
 
 } // namespace
 
 int main() {
-    const bool UPDATE = false;
+    util::setupSignalHandler();
 
-    const Config base("config.txt");
+    constexpr bool UPDATE = false;
 
-    const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = 1; N <= maxN; ++N) {
-        if (N < base.P)
+    const Config baseConfig("config.txt");
+    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
+
+    for (size_t N = baseConfig.P; N <= maxN; ++N) {
+        const auto cfg = baseConfig.withN(N);
+
+        if (shouldSkip(cfg, UPDATE))
             continue;
 
-        const auto cfg = base.withN(N);
-
-        if (std::filesystem::exists(cfg.toPath("step2-1")) && !UPDATE)
+        const auto rows = util::readCSV(cfg.toPath("step1"));
+        if (rows.empty())
             continue;
 
-        const auto csvRaw = util::readCSV(cfg.toPath("step1"));
-        if (csvRaw.empty())
-            continue;
+        util::SafeOutput out(cfg.toPath("step2-1"));
 
-        const auto csvParsed = parseCSV(csvRaw, cfg);
+        try {
+            processRows(rows, out.stream(), cfg);
 
-        const auto res = analyze(csvParsed, cfg);
-
-        util::writeCSV(cfg.toPath("step2-1"), res);
+            out.commit();
+        } catch (const std::exception& e) {
+            if (std::string(e.what()) == "Interrupted")
+                return 0;
+            throw;
+        }
     }
 
     return 0;

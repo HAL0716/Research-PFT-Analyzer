@@ -34,7 +34,8 @@ namespace {
             out << key1 << '\n';
             for (const auto& [key2, values] : submap) {
                 out << '\t' << key2 << '\n';
-                out << '\t' << '\t' << util::join(values, ",") << '\n';
+                for (const auto& value : values)
+                    out << '\t' << '\t' << value << '\n';
             }
         }
         out << '\n';

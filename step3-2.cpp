@@ -32,8 +32,8 @@ namespace {
     }
 
     void writeOutput(const recordMap& res, std::ostream& out) {
-        for (const auto& [key3, submap] : res) {
-            out << key3 << '\n';
+        for (const auto& [key1, submap] : res) {
+            out << key1 << '\n';
             for (const auto& [key2, values] : submap) {
                 out << '\t' << key2 << '\n';
                 out << '\t' << '\t' << util::join(values, ",") << '\n';

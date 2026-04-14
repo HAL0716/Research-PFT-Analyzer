@@ -48,6 +48,19 @@ namespace util {
     }
 
     template <typename Container>
+    Container setUnion(const Container& a, const Container& b) {
+        using T = typename Container::value_type;
+
+        std::unordered_set<T> s;
+        s.reserve(a.size() + b.size());
+
+        s.insert(a.begin(), a.end());
+        s.insert(b.begin(), b.end());
+
+        return Container(s.begin(), s.end());
+    }
+
+    template <typename Container>
     Container difference(const Container& a, const Container& b) {
         std::unordered_set<typename Container::value_type> sb;
         sb.reserve(b.size());

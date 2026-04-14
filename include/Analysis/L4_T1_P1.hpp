@@ -15,7 +15,8 @@ namespace Analysis {
 
             return {
                 evaluate(p[0], p[1], "S0", "S1"),
-                evaluate(p[0], p[2], "S0", "S2")};
+                evaluate(p[0], p[2], "S0", "S2"),
+                evaluate(util::setUnion(p[0], p[1]), p[2], "S0S1", "S2")};
         }
 
       private:

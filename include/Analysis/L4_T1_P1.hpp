@@ -7,7 +7,7 @@ namespace Analysis {
 
     class L4_T1_P1 : public Strategy {
       public:
-        std::vector<std::string> analyze(const Config&, const Alphabet&, const ProductSet& prodSet) override {
+        std::vector<std::string> analyze(const Config& cfg, const Alphabet&, const ProductSet& prodSet) override {
             if (!isValid(prodSet))
                 throw std::invalid_argument("Invalid product set");
 
@@ -16,7 +16,9 @@ namespace Analysis {
             return {
                 evaluate(p[0], p[1], "S0", "S1"),
                 evaluate(p[0], p[2], "S0", "S2"),
-                evaluate(util::setUnion(p[0], p[1]), p[2], "S0S1", "S2")};
+                p[0].size() == util::calcPower(cfg.Q, cfg.T) ? "全" : "非全",
+                evaluate(p[1], p[2], "S1", "S2"),
+                evaluate(p[1], p[3], "S1", "S3")};
         }
 
       private:

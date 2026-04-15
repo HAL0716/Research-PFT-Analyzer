@@ -10,6 +10,7 @@
 
 struct Config {
     size_t Q = 2, T = 2, L = 4, N = 4, P = 2, V = 3;
+    size_t featureNum = 0, targetNum = 0;
 
     explicit Config(const std::string& configFile = "config.txt") {
         init(configFile);
@@ -44,7 +45,7 @@ struct Config {
         auto data = util::readCSV(path, util::FileErrorPolicy::THROW);
 
         const std::unordered_map<std::string, size_t*> table = {
-            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}, {"V", &V}};
+            {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}, {"V", &V}, {"FEATURE_NUM", &featureNum}, {"TARGET_NUM", &targetNum}};
 
         for (const auto& row : data) {
             if (row.size() != 2)

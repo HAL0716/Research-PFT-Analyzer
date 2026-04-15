@@ -11,123 +11,156 @@
 
 namespace {
 
-    constexpr std::string MASK_TOKEN = "*";
-
     struct Record {
         std::vector<std::string> features;
-        util::ull vertNum;
-        util::ull maskSize;
+        size_t vertNum;
+        size_t maskSize;
+
+        std::string makeKey(int mask, int featureCount) const {
+            std::vector<std::string> key;
+            key.reserve(featureCount);
+            for (int i = 0; i < featureCount; ++i)
+                key.push_back((mask & (1 << i)) ? features[i] : "*");
+            return util::join(key, ",");
+        }
+
+        bool canUse(size_t bitCount) const {
+            return maskSize >= bitCount;
+        }
+
+        void updateMask(size_t bitCount) {
+            maskSize = std::min(maskSize, bitCount);
+        }
 
         bool operator==(const Record& other) const {
-            return features == other.features && vertNum == other.vertNum;
+            return features == other.features && vertNum == other.vertNum && maskSize == other.maskSize;
         }
 
         bool operator<(const Record& other) const {
-            if (features != other.features)
-                return features < other.features;
-            return vertNum < other.vertNum;
+            return std::tie(features, vertNum, maskSize) < std::tie(other.features, other.vertNum, other.maskSize);
         }
     };
 
-    template <typename Func>
-    void processRows(const util::csvData& row1, const util::csvData& row2, std::vector<Record>& res, Func genVertNum) {
-        for (size_t i = 0; i < row1.size(); ++i) {
-            util::checkInterrupted();
-
-            const auto vertNum = genVertNum(row1[i]);
-
-            res.push_back(Record{row2[i], vertNum, vertNum});
+    class DataBuilder {
+      public:
+        explicit DataBuilder(const Config& base) : baseConfig(base) {
         }
-    }
 
-    std::string makeKey(const Record& r, int mask, int featureCount) {
-        std::vector<std::string> key;
-        key.reserve(featureCount);
-        for (int i = 0; i < featureCount; ++i)
-            key.push_back((mask & (1 << i)) ? r.features[i] : MASK_TOKEN);
-        return util::join(key, ",");
-    }
+        std::vector<Record> build() {
+            std::vector<Record> data;
+            const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    void writeOutput(const std::vector<std::string>& res, std::ostream& out) {
-        out << util::join(res, "\n");
-    }
+            for (size_t N = baseConfig.P; N <= maxN; ++N) {
+                Logger::progress(N, maxN, "Analyzing N = " + std::to_string(N) + ": ", true);
 
-    bool shouldSkip(const Config& cfg) {
-        return !std::filesystem::exists(cfg.toPath("step2-1")) || !std::filesystem::exists(cfg.toPath("step2-2"));
-    }
+                auto cfg = baseConfig.withN(N);
+                if (shouldSkip(cfg))
+                    continue;
+
+                auto row1 = util::readCSV(cfg.toPath("step2-1"));
+                auto row2 = util::readCSV(cfg.toPath("step2-2"));
+                if (row1.size() != row2.size())
+                    continue;
+
+                process(row1, row2, data, cfg);
+                util::normalize(data);
+            }
+            return data;
+        }
+
+      private:
+        const Config& baseConfig;
+
+        static bool shouldSkip(const Config& cfg) {
+            return !std::filesystem::exists(cfg.toPath("step2-1")) || !std::filesystem::exists(cfg.toPath("step2-2"));
+        }
+
+        static void process(const util::csvData& row1, const util::csvData& row2, std::vector<Record>& out, const Config& cfg) {
+            const size_t split = cfg.L / cfg.T + 1;
+
+            for (size_t i = 0; i < row1.size(); ++i) {
+                util::checkInterrupted();
+
+                auto vertNum = static_cast<size_t>(std::accumulate(
+                    row1[i].begin() + split, row1[i].end(),
+                    static_cast<util::ull>(0),
+                    [](util::ull acc, const std::string& s) {
+                        return acc + std::stoull(s);
+                    }));
+
+                out.push_back({row2[i], vertNum, vertNum});
+            }
+        }
+    };
+
+    class Analyzer {
+      public:
+        Analyzer(std::vector<Record>& d, const Config& cfg)
+            : data(d), config(cfg) {
+        }
+
+        std::vector<std::string> run() {
+            std::vector<std::string> res;
+            size_t total = 1 << config.featureNum;
+            for (size_t mask = 0; mask < total; ++mask) {
+                Logger::progress(mask + 1, total, "Analyzing ", true);
+
+                auto groups = groupByMask(mask);
+
+                for (auto& [key, indices] : groups) {
+                    if (isTargetGroup(indices)) {
+                        res.push_back(key + " : " + std::to_string(config.targetNum));
+                        updateMask(indices, util::popcount(mask));
+                    }
+                }
+            }
+            return res;
+        }
+
+      private:
+        std::vector<Record>& data;
+        const Config& config;
+
+        std::unordered_map<std::string, std::vector<size_t>> groupByMask(size_t mask) {
+            std::unordered_map<std::string, std::vector<size_t>> groups;
+            size_t bitCount = util::popcount(mask);
+
+            for (size_t i = 0; i < data.size(); ++i) {
+                if (!data[i].canUse(bitCount))
+                    continue;
+                groups[data[i].makeKey(mask, config.featureNum)].push_back(i);
+            }
+            return groups;
+        }
+
+        bool isTargetGroup(const std::vector<size_t>& indices) {
+            std::set<size_t> nums;
+            for (auto idx : indices)
+                nums.insert(data[idx].vertNum);
+
+            return nums.size() == 1 && *nums.begin() == config.targetNum;
+        }
+
+        void updateMask(const std::vector<size_t>& indices, size_t bitCount) {
+            for (auto idx : indices)
+                data[idx].updateMask(bitCount);
+        }
+    };
 
 } // namespace
 
 int main() {
     util::setupSignalHandler();
 
-    const Config baseConfig("config.txt");
-    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
+    Config config("config.txt");
 
-    std::vector<Record> data;
+    DataBuilder builder(config);
+    auto data = builder.build();
 
-    for (size_t N = baseConfig.P; N <= maxN; ++N) {
-        Logger::progress(N, maxN, "Analyzing N = " + std::to_string(N) + ": ", true);
+    Analyzer analyzer(data, config);
+    auto result = analyzer.run();
 
-        const auto cfg = baseConfig.withN(N);
-
-        if (shouldSkip(cfg))
-            continue;
-
-        const auto row1 = util::readCSV(cfg.toPath("step2-1"));
-        const auto row2 = util::readCSV(cfg.toPath("step2-2"));
-        if (row1.size() != row2.size())
-            continue;
-
-        const size_t split = cfg.L / cfg.T + 1;
-        auto genVertNum = [split](const std::vector<std::string>& row) -> util::ull {
-            return std::accumulate(row.begin() + split, row.end(), static_cast<util::ull>(0), [](util::ull acc, const std::string& s) { return acc + std::stoull(s); });
-        };
-
-        try {
-            processRows(row1, row2, data, genVertNum);
-            util::normalize(data);
-        } catch (const std::exception& e) {
-            if (std::string(e.what()) == "Interrupted")
-                return 0;
-            throw;
-        }
-    }
-
-    std::vector<size_t> masks;
-    for (size_t i = 0; i < baseConfig.featureNum; ++i)
-        masks.push_back(i);
-
-    std::vector<std::string> res;
-
-    for (size_t i = 0; i < masks.size(); ++i) {
-        Logger::progress(i + 1, masks.size(), "Analyzing ", true);
-
-        const auto bitCount = util::popcount(masks[i]);
-        std::unordered_map<std::string, std::vector<size_t>> groups;
-
-        for (size_t j = 0; j < data.size(); ++j)
-            if (data[j].maskSize >= bitCount)
-                groups[makeKey(data[j], masks[i], baseConfig.featureNum)].push_back(j);
-
-        for (auto& [key, indices] : groups) {
-            std::set<size_t> nums;
-            for (const auto idx : indices)
-                nums.insert(data[idx].vertNum);
-
-            if (nums.size() == 1 && *nums.begin() == baseConfig.targetNum) {
-                res.push_back(key + " : " + std::to_string(*nums.begin()));
-
-                for (const auto idx : indices)
-                    data[idx].maskSize = std::min(data[idx].maskSize, bitCount);
-            }
-        }
-    }
-
-    util::SafeOutput out(baseConfig.toPath("step3-3", false));
-
-    writeOutput(res, out.stream());
+    util::SafeOutput out(config.toPath("step3-3", false));
+    out.stream() << util::join(result, "\n");
     out.commit();
-
-    return 0;
 }

@@ -18,7 +18,8 @@ namespace Analysis {
                 evaluate(p[0], p[2], "S0", "S2"),
                 p[0].size() == util::calcPower(cfg.Q, cfg.T) ? "全" : "非全",
                 evaluate(p[1], p[2], "S1", "S2"),
-                evaluate(p[1], p[3], "S1", "S3")};
+                evaluate(p[1], p[3], "S1", "S3"),
+                evaluate(p[2], p[3], "S2", "S3")};
         }
 
       private:

@@ -1,7 +1,7 @@
+#include <filesystem>
 #include <iostream>
 #include <set>
 #include <vector>
-#include <filesystem>
 
 #include "Alphabet.hpp"
 #include "Config.hpp"
@@ -113,7 +113,13 @@ namespace {
 
         const auto indices = util::range(1, symbols.size());
         const auto perms = util::Combinatorics::perms_r(indices, cfg.L / cfg.T);
-        const auto groups = util::Combinatorics::combs_r(perms, cfg.P);
+
+        std::set<decltype(perms)::value_type> filteredPerms;
+        for (const auto& p : perms)
+            if (p.front() != symbols.size() && p.back() != symbols.size())
+                filteredPerms.insert(p);
+
+        const auto groups = util::Combinatorics::combs_r(filteredPerms, cfg.P);
 
         std::set<decltype(groups)::value_type> res;
 
@@ -162,7 +168,6 @@ int main() {
 
     const size_t maxN = util::calcPower(base.Q, base.L);
     for (size_t N = base.P; N <= maxN; ++N) {
-
         const auto cfg = base.withN(N);
 
         if (std::filesystem::exists(cfg.toPath("step1")) && !UPDATE)

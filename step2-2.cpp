@@ -32,6 +32,8 @@ namespace {
     }
 
     bool shouldSkip(const Config& cfg, bool update) {
+        if (!std::filesystem::exists(cfg.toPath("step2-1")))
+            return true;
         return std::filesystem::exists(cfg.toPath("step2-2")) && !update;
     }
 

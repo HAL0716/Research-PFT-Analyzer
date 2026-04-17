@@ -17,4 +17,19 @@ namespace util {
         return pre + oss.str() + suf;
     }
 
+    std::vector<std::string> split(const std::string& str) {
+        std::vector<std::string> result;
+
+        size_t start = 0;
+        size_t pos = 0;
+
+        while ((pos = str.find('-', start)) != std::string::npos) {
+            result.emplace_back(str, start, pos - start);
+            start = pos + 1;
+        }
+
+        result.emplace_back(str, start);
+        return result;
+    }
+
 } // namespace util

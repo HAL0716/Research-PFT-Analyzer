@@ -60,6 +60,10 @@ namespace {
             out << rec.key << '\n';
     }
 
+    bool shouldSkip(const Config& cfg) {
+        return !(std::filesystem::exists(cfg.toPath("step2-1")) && std::filesystem::exists(cfg.toPath("step2-2")));
+    }
+
 } // namespace
 
 int main() {
@@ -74,6 +78,8 @@ int main() {
         Logger::progress(N, maxN, "Processing N = " + std::to_string(N) + ": ", true);
 
         const auto cfg = baseConfig.withN(N);
+        if (shouldSkip(cfg))
+            continue;
 
         const auto data1 = util::readCSV(cfg.toPath("step2-1"));
         const auto data2 = util::readCSV(cfg.toPath("step2-2"));

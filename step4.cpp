@@ -25,8 +25,8 @@ namespace {
             return util::join(key, ",");
         }
 
-        bool canUse(size_t bitCount) const {
-            return maskSize >= bitCount;
+        bool canUse(int mask) const {
+            return maskSize >= util::popcount(mask);
         }
 
         void update(size_t bitCount) {
@@ -48,7 +48,7 @@ namespace {
             const auto& vert = data[1];
             const auto& feat = util::split(data[2]);
 
-            return Record{feat, vert, feat.size()};
+            return Record{feat, vert, std::numeric_limits<size_t>::max()};
         }
 
         struct Hash {
@@ -81,20 +81,26 @@ namespace {
                 throw std::invalid_argument("No records to analyze");
         }
 
-        util::csvData run() {
-            util::csvData res;
+        std::set<util::csvRow> run() {
+            std::set<util::csvRow> res;
             size_t total = 1 << records[0].features.size();
             for (size_t mask = 0; mask < total; ++mask) {
-                Logger::progress(mask + 1, total, "Masking ", true);
+                Logger::progress(mask + 1, total, "Masking : ", true);
 
-                for (const auto& [key, indices] : groupByMask(mask)) {
+                for (const auto& [_, indices] : groupByMask(mask)) {
                     const auto nums = toNums(indices);
                     if (nums.size() != 1)
                         continue;
-                    res.push_back({key, *nums.begin()});
+
+                    const auto [key, matchCount] = toKey(indices);
+                    if (matchCount != util::popcount(mask))
+                        continue;
+
+                    res.insert(toRow(key, nums, mask, indices));
                     updateRecords(indices, mask);
                 }
             }
+            appendUnresolved(res, total);
             return res;
         }
 
@@ -102,11 +108,17 @@ namespace {
         std::vector<Record> records;
 
         std::unordered_map<std::string, std::set<size_t>> groupByMask(size_t mask) {
+            std::unordered_map<std::string, std::pair<std::set<size_t>, bool>> tmp;
+            for (size_t i = 0; i < records.size(); ++i) {
+                auto& [indices, ok] = tmp[records[i].masked(mask)];
+                indices.insert(i);
+                ok |= records[i].canUse(mask);
+            }
+
             std::unordered_map<std::string, std::set<size_t>> res;
-            size_t bit = util::popcount(mask);
-            for (size_t i = 0; i < records.size(); ++i)
-                if (records[i].canUse(bit))
-                    res[records[i].masked(mask)].insert(i);
+            for (const auto& [k, v] : tmp)
+                if (v.second)
+                    res.emplace(k, std::move(v.first));
             return res;
         }
 
@@ -117,17 +129,59 @@ namespace {
             return res;
         }
 
+        std::pair<std::vector<std::string>, size_t> toKey(const std::set<size_t>& indices) {
+            const auto& base = records[*indices.begin()].features;
+
+            auto key = buildKey(indices, base);
+            size_t matchCount = countMatches(key);
+
+            return {key, matchCount};
+        }
+
+        std::vector<std::string> buildKey(const std::set<size_t>& indices, const std::vector<std::string>& base) {
+            std::vector<std::string> key = base;
+            for (auto idx : indices) {
+                const auto& features = records[idx].features;
+                for (size_t i = 0; i < key.size(); ++i)
+                    if (key[i] != features[i])
+                        key[i] = "*";
+            }
+            return key;
+        }
+
+        size_t countMatches(const std::vector<std::string>& key) {
+            return std::count_if(key.begin(), key.end(), [](const std::string& v) { return v != "*"; });
+        }
+
+        util::csvRow toRow(const std::vector<std::string>& key, const std::set<std::string>& nums, size_t mask, const std::set<size_t>& indices) {
+            util::csvRow row;
+            row.reserve(3 + indices.size());
+            row.push_back(util::join(key, ","));
+            row.push_back(util::join(nums, ","));
+            row.push_back(std::to_string(mask));
+            for (auto idx : indices)
+                row.push_back(util::join(records[idx].features, "-"));
+            return row;
+        }
+
         void updateRecords(const std::set<size_t>& indices, size_t mask) {
             size_t bit = util::popcount(mask);
             for (auto idx : indices)
                 records[idx].update(bit);
         }
+
+        void appendUnresolved(std::set<util::csvRow>& res, size_t total) {
+            for (const auto& record : records)
+                if (record.maskSize == std::numeric_limits<size_t>::max())
+                    res.insert({util::join(record.features, ","), record.vertNums, std::to_string(total - 1)});
+        }
     };
 
-    void writeOutput(const util::csvData& result, util::SafeOutput& out) {
+    void writeOutput(const std::set<util::csvRow>& result, util::SafeOutput& out) {
         util::csvData sorted(result.begin(), result.end());
         std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
-            return (a[1] == b[1]) ? a[0] > b[0] : a[1] < b[1];
+            auto key = [](const auto& v) { return std::tuple{v[1], std::stoul(v[2]), v[0]}; };
+            return key(a) < key(b);
         });
 
         for (const auto& row : sorted)

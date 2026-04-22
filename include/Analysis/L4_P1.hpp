@@ -5,7 +5,7 @@
 
 namespace Analysis {
 
-    class L4_T1_P1 : public Strategy {
+    class L4_P1 : public Strategy {
       public:
         std::vector<std::string> analyze(const Config&, const Alphabet&, const ProductSet& prodSet) override {
             if (!isValid(prodSet))
@@ -19,8 +19,7 @@ namespace Analysis {
                 // evaluate(p[0], p[3], "0", "3"),
                 evaluate(p[1], p[2], "1", "2"),
                 evaluate(p[1], p[3], "1", "3"),
-                evaluate(p[2], p[3], "2", "3")
-            };
+                evaluate(p[2], p[3], "2", "3")};
         }
 
       private:

@@ -19,8 +19,9 @@ namespace util {
         return res;
     }
 
-    inline int popcount(unsigned int x) {
-        int count = 0;
+    template <typename NumType>
+    inline ull popcount(NumType x) {
+        ull count = 0;
         while (x) {
             x &= (x - 1);
             ++count;

@@ -22,14 +22,14 @@ struct Config {
         return c;
     }
 
-    std::string toPath(const std::string& dir = "", bool isIndividual = true) const {
+    std::string toPath(const std::string& dir = "", bool isIndividual = true, const std::string& ext = ".csv") const {
         std::string base = RESULT_DIR;
         if (!dir.empty())
             base += "/" + dir;
         if (isIndividual)
-            return std::format("{}/T={}_L={}_P={}_Q={}/N={}.csv", base, T, L, P, Q, N);
+            return std::format("{}/T={}_L={}_P={}_Q={}/N={}{}", base, T, L, P, Q, N, ext);
         else
-            return std::format("{}/T={}_L={}_P={}_Q={}.txt", base, T, L, P, Q);
+            return std::format("{}/T={}_L={}_P={}_Q={}{}", base, T, L, P, Q, ext);
     }
 
   private:

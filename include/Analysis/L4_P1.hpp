@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 #include "Analysis/Strategy.hpp"
 #include "util/util.hpp"
 

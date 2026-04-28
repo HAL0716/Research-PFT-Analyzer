@@ -43,7 +43,7 @@ namespace Transform {
     constexpr char SYMBOL_DELIM = '-';
 
     auto toProductSet(const util::csvRow& row, const Config& cfg) {
-        if (row.size() != cfg.L / cfg.T)
+        if (row.size() != cfg.L / cfg.T * cfg.P)
             throw std::invalid_argument(util::join(row, ",") + " is invalid row size");
 
         ProductSet res;

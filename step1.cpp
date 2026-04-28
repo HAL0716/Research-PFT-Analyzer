@@ -53,7 +53,7 @@ namespace {
         }
 
         bool operator()(const ProductSet& ps) const {
-            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNoIntersection(ps) && hasMappingInvariance(ps);
+            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNoIntersection(ps) && arePairIndependent(ps) && hasMappingInvariance(ps);
         }
 
       private:
@@ -77,18 +77,49 @@ namespace {
         }
 
         bool hasNoIntersection(const ProductSet& ps) const {
-            std::vector<Product> v(ps.begin(), ps.end());
+            if (ps.size() < 2)
+                return true;
 
             auto intersect = [](const Product& a, const Product& b) {
-                for (size_t i = 0; i < a.size(); ++i)
+                for (size_t i = 0; i < (a.size() - 1); ++i)
                     if (!util::hasIntersection(a[i], b[i]))
                         return false;
                 return true;
             };
 
-            for (size_t i = 0; i < v.size(); ++i)
-                for (size_t j = i + 1; j < v.size(); ++j)
-                    if (intersect(v[i], v[j]))
+            for (auto it1 = ps.begin(); it1 != ps.end(); ++it1)
+                for (auto it2 = std::next(it1); it2 != ps.end(); ++it2)
+                    if (intersect(*it1, *it2))
+                        return false;
+
+            return true;
+        }
+
+        bool arePairIndependent(const ProductSet& ps) const {
+            if (ps.size() < 2)
+                return true;
+
+            auto independent = [](const Product& a, const Product& b) {
+                for (size_t skip = 0; skip < a.size(); ++skip) {
+                    bool equal = true;
+                    for (size_t i = 0; i < a.size(); ++i) {
+                        if (i == skip)
+                            continue;
+                        if (a[i] != b[i]) {
+                            equal = false;
+                            break;
+                        }
+                    }
+
+                    if (equal)
+                        return false;
+                }
+                return true;
+            };
+
+            for (auto it1 = ps.begin(); it1 != ps.end(); ++it1)
+                for (auto it2 = std::next(it1); it2 != ps.end(); ++it2)
+                    if (!independent(*it1, *it2))
                         return false;
 
             return true;
@@ -130,51 +161,77 @@ namespace {
         return res;
     }
 
-    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
+    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid, std::ostream& out) {
         const auto base = genBluePrint(cfg, symbols);
         if (base.empty())
             return;
 
-        auto csv = util::createFile(cfg.toPath("step1"));
+        size_t cnt = 0;
+        const size_t total = base.size();
+        const std::string label = "Generating N = " + std::to_string(cfg.N) + ": ";
 
-        size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
-            Logger::progress(++cnt, total, "Generating N = " + std::to_string(cfg.N) + ": ", true);
+            util::checkInterrupted();
+
+            Logger::progress(++cnt, total, label, true);
 
             std::vector<ProductSet> candidates;
             for (const auto& pattern : group) {
+                util::checkInterrupted();
+
                 std::vector<std::set<SymbolSet>> combs;
-                for (auto n : pattern)
+                for (auto n : pattern) {
+                    util::checkInterrupted();
+
                     combs.push_back(util::Combinatorics::combs(symbols, n));
+                }
 
                 candidates.push_back(util::Product::asVec(combs));
             }
 
             for (const auto& ps : util::Product::asSet(candidates))
-                if (isValid(ps))
-                    csv << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
+                if (isValid(ps)) {
+                    util::checkInterrupted();
+                    out << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
+                }
         }
+    }
+
+    bool shouldSkip(const Config& cfg, bool update) {
+        return std::filesystem::exists(cfg.toPath("step1")) && !update;
     }
 
 } // namespace
 
 int main() {
+    util::setupSignalHandler();
+
     const bool UPDATE = false;
 
-    const Config base("config.txt");
+    const Config baseConfig("config.txt");
+    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    const Alphabet alpha(base.Q);
-    const SymbolSet symbols = genSymbols(base, alpha);
+    const Alphabet alpha(baseConfig.Q);
+    const SymbolSet symbols = genSymbols(baseConfig, alpha);
 
-    const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = base.P; N <= maxN; ++N) {
-        const auto cfg = base.withN(N);
+    for (size_t N = baseConfig.P; N <= maxN; ++N) {
+        const auto cfg = baseConfig.withN(N);
 
-        if (std::filesystem::exists(cfg.toPath("step1")) && !UPDATE)
+        if (shouldSkip(cfg, UPDATE))
             continue;
 
-        const Validator validate(cfg, alpha, symbols);
-        genProductSet(cfg, symbols, validate);
+        util::SafeOutput out(cfg.toPath("step1"));
+
+        try {
+            const Validator validate(cfg, alpha, symbols);
+            genProductSet(cfg, symbols, validate, out.stream());
+
+            out.commit();
+        } catch (const std::exception& e) {
+            if (std::string(e.what()) == "Interrupted")
+                return 0;
+            throw;
+        }
     }
 
     return 0;

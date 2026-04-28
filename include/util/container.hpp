@@ -13,9 +13,11 @@ namespace util {
         c.erase(std::unique(c.begin(), c.end()), c.end());
     }
 
-    inline std::vector<size_t> range(size_t st, size_t ed) {
+    inline std::vector<size_t> range(size_t st, size_t ed, bool reverse = false) {
         std::vector<size_t> v(ed - st + 1);
         std::iota(v.begin(), v.end(), st);
+        if (reverse)
+            std::reverse(v.begin(), v.end());
         return v;
     }
 

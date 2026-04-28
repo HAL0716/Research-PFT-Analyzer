@@ -13,7 +13,7 @@ namespace {
 
     void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
         Alphabet alphabet(cfg.Q);
-        Analysis::Engine engine(cfg, alphabet);
+        Analysis::Engine engine(cfg);
 
         size_t cnt = 0;
         const size_t total = rows.size();

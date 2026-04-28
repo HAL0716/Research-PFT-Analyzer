@@ -8,41 +8,23 @@
 namespace Analysis {
 
     class L4_P1 : public Strategy {
-      public:
-        std::vector<std::string> analyze(const Config&, const Alphabet&, const ProductSet& prodSet) override {
-            if (!isValid(prodSet))
-                throw std::invalid_argument("Invalid product set");
-
-            const auto& p = *prodSet.begin();
-
-            return {
-                evaluate(p[0], p[1], "0", "1"),
-                evaluate(p[0], p[2], "0", "2"),
-                // evaluate(p[0], p[3], "0", "3"),
-                evaluate(p[1], p[2], "1", "2"),
-                evaluate(p[1], p[3], "1", "3"),
-                evaluate(p[2], p[3], "2", "3")};
-        }
-
       private:
-        bool isValid(const ProductSet& ps) const {
+        bool validateInput(const ProductSet& ps) const override {
             return ps.size() == 1 && ps.begin()->size() == 4;
         }
 
-        std::string evaluate(const SymbolSet& a, const SymbolSet& b, const std::string& labelA, const std::string& labelB) const {
-            if (!util::hasIntersection(a, b))
-                return "素";
+        std::vector<std::string> compute(const ProductSet& prodSet) override {
+            const std::vector<Product>& products = std::vector<Product>(prodSet.begin(), prodSet.end());
+            const auto& p0 = products[0];
 
-            if (a == b)
-                return "等";
-
-            if (util::isSubset(a, b))
-                return labelB;
-
-            if (util::isSubset(b, a))
-                return labelA;
-
-            return "交";
+            return {
+                classifyRelation(p0[0], p0[1], "0", "1"),
+                classifyRelation(p0[0], p0[2], "0", "2"),
+                // classifyRelation(p0[0], p0[3], "0", "3"),
+                classifyRelation(p0[1], p0[2], "1", "2"),
+                classifyRelation(p0[1], p0[3], "1", "3"),
+                classifyRelation(p0[2], p0[3], "2", "3"),
+            };
         }
     };
 

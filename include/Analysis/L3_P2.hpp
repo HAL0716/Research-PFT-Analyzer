@@ -34,6 +34,12 @@ namespace Analysis {
                 classifyRelation(p0[2], p1[0], "0", "1"),
                 classifyRelation(p0[2], p1[1], "0", "1"),
                 classifyRelation(p0[2], p1[2], "0", "1"),
+                std::to_string(p0[0].size()),
+                std::to_string(p0[1].size()),
+                std::to_string(p0[2].size()),
+                std::to_string(p1[0].size()),
+                std::to_string(p1[1].size()),
+                std::to_string(p1[2].size()),
             };
         }
     };

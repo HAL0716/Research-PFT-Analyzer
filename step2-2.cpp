@@ -14,6 +14,14 @@ namespace {
     void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
         Alphabet alphabet(cfg.Q);
         Analysis::Engine engine(cfg);
+        util::Encoder encoder;
+
+        auto format = [&](const auto& result) -> std::string {
+            const auto tmp = util::join(result, "-");
+            const auto [id, inserted] = encoder.getOrCreateId(tmp);
+
+            return std::to_string(id) + "," + (inserted ? tmp : "");
+        };
 
         size_t cnt = 0;
         const size_t total = rows.size();
@@ -26,8 +34,9 @@ namespace {
 
             engine.set(Transform::toProductSet(row, cfg));
 
-            const auto res = engine.getResult();
-            out << util::join(res, ",") << '\n';
+            const auto res = format(engine.getResult());
+
+            out << res << '\n';
         }
     }
 

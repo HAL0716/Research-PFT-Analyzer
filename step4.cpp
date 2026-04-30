@@ -14,40 +14,37 @@ namespace {
     using Vertex = std::string;
     using FeatureToVertices = std::unordered_map<Feature, std::set<Vertex>>;
 
-    FeatureToVertices processing(const util::csvData& data) {
-        FeatureToVertices result;
-
-        size_t count = 0;
-        const size_t total = data.size();
-        const std::string label = "Processing : ";
-
-        for (const auto& row : data) {
-            Logger::progress(++count, total, label, true);
-
-            if (row.size() < 3)
-                throw std::runtime_error("Invalid row: " + util::join(row, ","));
+    void processRows(const util::csvData& rows, FeatureToVertices& result) {
+        for (const auto& row : rows) {
+            if (row.size() != 3)
+                throw std::runtime_error("Invalid Row: " + util::join(row, ","));
 
             const Vertex& vert = row[1];
             const Feature& feat = row[2];
 
             result[feat].insert(vert);
         }
-
-        return result;
     }
 
     void writeOutput(const FeatureToVertices& result, std::ostream& out) {
         std::vector<std::pair<Feature, std::set<Vertex>>> sorted(result.begin(), result.end());
         std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) { return std::tie(a.second, a.first) < std::tie(b.second, b.first); });
 
+        size_t cnt = 0;
+        const size_t total = sorted.size();
+        const std::string label = "Writing : ";
+
         for (const auto& [feat, verts] : sorted) {
             util::checkInterrupted();
+
+            Logger::progress(++cnt, total, label, true);
+
             out << feat << "," << util::join(verts, ",") << "\n";
         }
     }
 
     bool shouldSkip(const Config& cfg) {
-        return !std::filesystem::exists(cfg.toPath("step3", false));
+        return !std::filesystem::exists(cfg.toPath("step3"));
     }
 
 } // namespace
@@ -55,16 +52,31 @@ namespace {
 int main() {
     util::setupSignalHandler();
 
-    Config cfg("config.txt");
-    if (shouldSkip(cfg))
-        return 0;
+    const Config baseConfig("config.txt");
+    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    const auto data = util::readCSV(cfg.toPath("step3", false));
-    const auto result = processing(data);
+    FeatureToVertices res;
+
+    for (size_t N = baseConfig.P; N <= maxN; ++N) {
+        Logger::progress(N, maxN, "Processing N = " + std::to_string(N) + " : ", true);
+
+        const auto cfg = baseConfig.withN(N);
+
+        if (shouldSkip(cfg))
+            continue;
+
+        const auto row = util::readCSV(cfg.toPath("step3"));
+        if (row.empty())
+            continue;
+
+        processRows(row, res);
+    }
+
+    util::SafeOutput out(baseConfig.toPath("step4", false));
 
     try {
-        util::SafeOutput out(cfg.toPath("step4", false));
-        writeOutput(result, out.stream());
+        writeOutput(res, out.stream());
+
         out.commit();
     } catch (const std::exception& e) {
         if (std::string(e.what()) == "Interrupted")

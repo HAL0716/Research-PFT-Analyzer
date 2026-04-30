@@ -6,6 +6,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "util/string.hpp"
@@ -56,6 +59,10 @@ namespace util {
 
             while (std::getline(ss, cell, ',')) {
                 row.push_back(cell);
+            }
+
+            if (!line.empty() && line.back() == ',') {
+                row.emplace_back("");
             }
 
             data.push_back(std::move(row));
@@ -110,6 +117,38 @@ namespace util {
         std::string tmpPath_;
         std::ofstream ofs_;
         bool committed_ = false;
+    };
+
+    class Encoder {
+      public:
+        std::pair<size_t, bool> getOrCreateId(std::string_view s) {
+            auto [it, inserted] = str2id.try_emplace(std::string(s), next_id);
+            if (inserted)
+                ++next_id;
+            return {it->second, inserted};
+        }
+
+      private:
+        std::unordered_map<std::string, size_t> str2id;
+        size_t next_id = 0;
+    };
+
+    class Decoder {
+      public:
+        void define(size_t id, std::string_view s) {
+            if (id != id2str.size())
+                throw std::runtime_error("Invalid ID order");
+            id2str.emplace_back(s);
+        }
+
+        std::string_view get(size_t id) const {
+            if (id >= id2str.size())
+                throw std::runtime_error("Unknown ID");
+            return id2str[id];
+        }
+
+      private:
+        std::vector<std::string> id2str;
     };
 
 } // namespace util

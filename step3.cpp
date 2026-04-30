@@ -2,6 +2,7 @@
 #include <ostream>
 #include <span>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
@@ -12,56 +13,58 @@
 
 namespace {
 
-    struct Record {
-        size_t id;
-        std::string key;
+    void processRows(const util::csvData& rows1, const util::csvData& rows2, std::ostream& out, const Config& cfg) {
+        util::Decoder decoder1, decoder2;
 
-        bool operator==(const Record& other) const {
-            return std::tie(id, key) == std::tie(other.id, other.key);
-        }
-
-        bool operator<(const Record& other) const {
-            return std::tie(id, key) < std::tie(other.id, other.key);
-        }
-
-        static Record make(size_t id, const util::csvRow& data1, const util::csvRow& data2) {
-            size_t mid = data1.size() / 2;
-
-            std::span<const std::string> v1(data1.data(), mid);
-            std::span<const std::string> v2(data1.data() + mid, data1.size() - mid);
-
-            return Record{id, util::join(v1, "-") + "," + util::join(v2, "-") + "," + util::join(data2, "-")};
-        }
-
-        struct Hash {
-            size_t operator()(const Record& r) const {
-                size_t h = std::hash<size_t>()(r.id);
-                h ^= std::hash<std::string>()(r.key) + 0x9e3779b9 + (h << 6) + (h >> 2);
-                return h;
-            }
+        auto resolve = [&](const auto& key, const auto& val, util::Decoder& decoder) -> std::string {
+            const size_t id = std::stoul(key);
+            if (!val.empty())
+                decoder.define(id, val);
+            return std::string(decoder.get(id));
         };
-    };
 
-    using RecordSet = std::unordered_set<Record, Record::Hash>;
+        auto toRecord = [&](const auto& row1, const auto& row2) -> std::string {
+            if (row1.size() != 4)
+                throw std::runtime_error("Invalid Row1: " + util::join(row1, ","));
+            if (row2.size() != 2)
+                throw std::runtime_error("Invalid Row2: " + util::join(row2, ","));
 
-    void updateRecords(size_t id, const util::csvData& data1, const util::csvData& data2, RecordSet& records) {
-        for (size_t i = 0; i < data1.size(); ++i) {
+            std::vector<std::string> res;
+            res.push_back(resolve(row1[0], row1[1], decoder1));
+            res.push_back(resolve(row1[2], row1[3], decoder1));
+            res.push_back(resolve(row2[0], row2[1], decoder2));
+
+            return util::join(res, ",");
+        };
+
+        std::unordered_set<std::string> records;
+
+        for (size_t i = 0; i < rows1.size(); ++i) {
             util::checkInterrupted();
 
-            records.insert(Record::make(id, data1[i], data2[i]));
+            Logger::progress(i + 1, rows1.size(), "Processing N = " + std::to_string(cfg.N) + " : ", true);
+
+            records.emplace(toRecord(rows1[i], rows2[i]));
+        }
+
+        std::vector<std::string> sorted(records.begin(), records.end());
+        std::sort(sorted.begin(), sorted.end());
+
+        size_t cnt = 0;
+        const size_t total = sorted.size();
+        const std::string label = "Writing N = " + std::to_string(cfg.N) + " : ";
+
+        for (const auto& rec : sorted) {
+            util::checkInterrupted();
+
+            Logger::progress(++cnt, total, label, true);
+
+            out << rec << '\n';
         }
     }
 
-    void writeOutput(const RecordSet& records, std::ostream& out) {
-        std::vector<Record> sorted(records.begin(), records.end());
-        std::sort(sorted.begin(), sorted.end());
-
-        for (const auto& rec : sorted)
-            out << rec.key << '\n';
-    }
-
-    bool shouldSkip(const Config& cfg) {
-        return !(std::filesystem::exists(cfg.toPath("step2-1")) && std::filesystem::exists(cfg.toPath("step2-2")));
+    bool shouldSkip(const Config& cfg, bool update) {
+        return std::filesystem::exists(cfg.toPath("step3")) && !update;
     }
 
 } // namespace
@@ -69,35 +72,34 @@ namespace {
 int main() {
     util::setupSignalHandler();
 
+    constexpr bool UPDATE = false;
+
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    RecordSet records;
-
     for (size_t N = baseConfig.P; N <= maxN; ++N) {
-        Logger::progress(N, maxN, "Processing N = " + std::to_string(N) + ": ", true);
-
         const auto cfg = baseConfig.withN(N);
-        if (shouldSkip(cfg))
+
+        if (shouldSkip(cfg, UPDATE))
             continue;
 
-        const auto data1 = util::readCSV(cfg.toPath("step2-1"));
-        const auto data2 = util::readCSV(cfg.toPath("step2-2"));
-        if (data1.size() != data2.size())
+        const auto rows1 = util::readCSV(cfg.toPath("step2-1"));
+        const auto rows2 = util::readCSV(cfg.toPath("step2-2"));
+        if (rows1.size() != rows2.size())
             continue;
+
+        util::SafeOutput out(cfg.toPath("step3"));
 
         try {
-            updateRecords(N, data1, data2, records);
+            processRows(rows1, rows2, out.stream(), cfg);
+
+            out.commit();
         } catch (const std::exception& e) {
             if (std::string(e.what()) == "Interrupted")
                 return 0;
             throw;
         }
     }
-
-    util::SafeOutput out(baseConfig.toPath("step3", false));
-    writeOutput(records, out.stream());
-    out.commit();
 
     return 0;
 }

@@ -53,7 +53,7 @@ namespace {
         }
 
         bool operator()(const ProductSet& ps) const {
-            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNoIntersection(ps) && arePairIndependent(ps) && hasMappingInvariance(ps);
+            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNotAllSymbols(ps) && hasNoIntersection(ps) && arePairIndependent(ps) && hasMappingInvariance(ps);
         }
 
       private:
@@ -74,6 +74,15 @@ namespace {
                         return true;
 
             return false;
+        }
+
+        bool hasNotAllSymbols(const ProductSet& ps) const {
+            if (ps.size() < 2)
+                return true;
+            std::set<Symbol> allSymbols;
+            for (const auto& p : ps)
+                allSymbols.insert(p[0].begin(), p[0].end());
+            return allSymbols != symbols_;
         }
 
         bool hasNoIntersection(const ProductSet& ps) const {

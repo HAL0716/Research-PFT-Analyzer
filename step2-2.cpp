@@ -40,10 +40,10 @@ namespace {
         }
     }
 
-    bool shouldSkip(const Config& cfg, bool update) {
+    bool shouldSkip(const Config& cfg) {
         if (!std::filesystem::exists(cfg.toPath("step2-1")))
             return true;
-        return std::filesystem::exists(cfg.toPath("step2-2")) && !update;
+        return std::filesystem::exists(cfg.toPath("step2-2")) && !cfg.UPDATE;
     }
 
 } // namespace
@@ -51,15 +51,13 @@ namespace {
 int main() {
     util::setupSignalHandler();
 
-    constexpr bool Update = false;
-
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
     for (size_t n = baseConfig.P; n <= maxN; ++n) {
         const Config cfg = baseConfig.withN(n);
 
-        if (shouldSkip(cfg, Update))
+        if (shouldSkip(cfg))
             continue;
 
         const auto rows = util::readCSV(cfg.toPath("step1"));

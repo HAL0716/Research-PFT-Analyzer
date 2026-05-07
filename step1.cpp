@@ -206,16 +206,14 @@ namespace {
         }
     }
 
-    bool shouldSkip(const Config& cfg, bool update) {
-        return std::filesystem::exists(cfg.toPath("step1")) && !update;
+    bool shouldSkip(const Config& cfg) {
+        return std::filesystem::exists(cfg.toPath("step1")) && !cfg.UPDATE;
     }
 
 } // namespace
 
 int main() {
     util::setupSignalHandler();
-
-    const bool UPDATE = false;
 
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
@@ -226,7 +224,7 @@ int main() {
     for (size_t N = baseConfig.P; N <= maxN; ++N) {
         const auto cfg = baseConfig.withN(N);
 
-        if (shouldSkip(cfg, UPDATE))
+        if (shouldSkip(cfg))
             continue;
 
         util::SafeOutput out(cfg.toPath("step1"));

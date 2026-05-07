@@ -10,6 +10,7 @@
 
 struct Config {
     size_t Q = 2, T = 2, L = 4, N = 4, P = 2, V = 3;
+    bool UPDATE = false;
 
     explicit Config(const std::string& configFile = "config.txt") {
         init(configFile);
@@ -53,6 +54,10 @@ struct Config {
             auto it = table.find(row[0]);
             if (it != table.end()) {
                 *(it->second) = std::stoul(row[1]);
+            }
+
+            if (row[0] == "UPDATE") {
+                UPDATE = row[1] == "1" || row[1] == "true" || row[1] == "TRUE";
             }
         }
     }

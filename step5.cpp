@@ -26,7 +26,7 @@ namespace {
         }
 
         bool canUse(int mask) const {
-            return maskSize >= util::popcount(mask);
+            return util::popcount(mask) <= maskSize;
         }
 
         void update(size_t bitCount) {

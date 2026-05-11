@@ -17,13 +17,13 @@ namespace util {
         return pre + oss.str() + suf;
     }
 
-    std::vector<std::string> split(const std::string& str) {
+    std::vector<std::string> split(const std::string& str, char delim = '-') {
         std::vector<std::string> result;
 
         size_t start = 0;
         size_t pos = 0;
 
-        while ((pos = str.find('-', start)) != std::string::npos) {
+        while ((pos = str.find(delim, start)) != std::string::npos) {
             result.emplace_back(str, start, pos - start);
             start = pos + 1;
         }

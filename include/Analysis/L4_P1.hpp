@@ -1,9 +1,6 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "Analysis/Strategy.hpp"
-#include "util/util.hpp"
 
 namespace Analysis {
 
@@ -13,19 +10,21 @@ namespace Analysis {
             return ps.size() == 1 && ps.begin()->size() == 4;
         }
 
-        std::vector<std::string> compute(const ProductSet& prodSet) override {
-            const std::vector<Product>& products = std::vector<Product>(prodSet.begin(), prodSet.end());
-            const auto& p0 = products[0];
+        std::vector<std::string> buildRelations(const std::vector<Product>& p) const override {
+            const auto& a = p[0];
 
             return {
-                classifyRelation(p0[0], p0[1], "0", "1"),
-                classifyRelation(p0[0], p0[2], "0", "2"),
-                // classifyRelation(p0[0], p0[3], "0", "3"),
-                classifyRelation(p0[1], p0[2], "1", "2"),
-                classifyRelation(p0[1], p0[3], "1", "3"),
-                classifyRelation(p0[2], p0[3], "2", "3"),
-            };
-        }
+                util::join(
+                    std::vector{
+                        classifyRelation(a[0], a[1], "0", "1"),
+                        classifyRelation(a[0], a[2], "0", "2"),
+                        // classifyRelation(a[0], a[3], "0", "3"),
+                        classifyRelation(a[1], a[2], "1", "2"),
+                        classifyRelation(a[1], a[3], "1", "3"),
+                        classifyRelation(a[2], a[3], "2", "3"),
+                    },
+                    "-")};
+        };
     };
 
 } // namespace Analysis

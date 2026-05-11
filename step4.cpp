@@ -16,13 +16,13 @@ namespace {
 
     void processRows(const util::csvData& rows, FeatureToVertices& result) {
         for (const auto& row : rows) {
-            if (row.size() != 3)
+            if (row.size() < 3)
                 throw std::runtime_error("Invalid Row: " + util::join(row, ","));
 
             const Vertex& vert = row[1];
-            const Feature& feat = row[2];
+            const std::vector<Feature> feats(row.begin() + 2, row.end());
 
-            result[feat].insert(vert);
+            result[util::join(feats, ":")].insert(vert);
         }
     }
 

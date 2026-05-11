@@ -17,10 +17,12 @@ namespace {
         util::Encoder encoder;
 
         auto format = [&](const auto& result) -> std::string {
-            const auto tmp = util::join(result, "-");
-            const auto [id, inserted] = encoder.getOrCreateId(tmp);
-
-            return std::to_string(id) + "," + (inserted ? tmp : "");
+            std::vector<std::string> formatted;
+            for (const auto& r : result) {
+                const auto [id, inserted] = encoder.getOrCreateId(r);
+                formatted.push_back(std::to_string(id) + "," + (inserted ? r : ""));
+            }
+            return util::join(formatted, ",");
         };
 
         size_t cnt = 0;
@@ -34,9 +36,7 @@ namespace {
 
             engine.set(Transform::toProductSet(row, cfg));
 
-            const auto res = format(engine.getResult());
-
-            out << res << '\n';
+            out << format(engine.getResult()) << '\n';
         }
     }
 

@@ -1,9 +1,6 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "Analysis/Strategy.hpp"
-#include "util/util.hpp"
 
 namespace Analysis {
 
@@ -13,34 +10,36 @@ namespace Analysis {
             return ps.size() == 2 && ps.begin()->size() == 3;
         }
 
-        std::vector<std::string> compute(const ProductSet& prodSet) override {
-            const std::vector<Product>& products = std::vector<Product>(prodSet.begin(), prodSet.end());
-            const auto& p0 = products[0];
-            const auto& p1 = products[1];
-
-            return {
-                classifyRelation(p0[0], p0[1], "0", "1"),
-                // classifyRelation(p0[0], p0[2], "0", "2"),
-                classifyRelation(p0[1], p0[2], "1", "2"),
-                classifyRelation(p1[0], p1[1], "0", "1"),
-                // classifyRelation(p1[0], p1[2], "0", "2"),
-                classifyRelation(p1[1], p1[2], "1", "2"),
-                classifyRelation(p0[0], p1[0], "0", "1"),
-                classifyRelation(p0[0], p1[1], "0", "1"),
-                classifyRelation(p0[0], p1[2], "0", "1"),
-                classifyRelation(p0[1], p1[0], "0", "1"),
-                classifyRelation(p0[1], p1[1], "0", "1"),
-                classifyRelation(p0[1], p1[2], "0", "1"),
-                classifyRelation(p0[2], p1[0], "0", "1"),
-                classifyRelation(p0[2], p1[1], "0", "1"),
-                classifyRelation(p0[2], p1[2], "0", "1"),
-                std::to_string(p0[0].size()),
-                std::to_string(p0[1].size()),
-                std::to_string(p0[2].size()),
-                std::to_string(p1[0].size()),
-                std::to_string(p1[1].size()),
-                std::to_string(p1[2].size()),
+        std::vector<std::string> buildRelations(const std::vector<Product>& p) const override {
+            auto build = [&](const Product& a, const Product& b) {
+                return util::join(
+                    std::vector{
+                        classifyRelation(a[0], a[1], "A0", "A1"),
+                        // classifyRelation(a[0], a[2], "A0", "A2"),
+                        classifyRelation(a[1], a[2], "A1", "A2"),
+                        classifyRelation(b[0], b[1], "B0", "B1"),
+                        // classifyRelation(b[0], b[2], "B0", "B2"),
+                        classifyRelation(b[1], b[2], "B1", "B2"),
+                        classifyRelation(a[0], b[0], "A0", "B0"),
+                        // classifyRelation(a[1], b[1], "A1", "B1"),
+                        // classifyRelation(a[2], b[2], "A2", "B2"),
+                        // classifyRelation(a[0], b[1], "A0", "B1"),
+                        // classifyRelation(a[1], b[0], "A1", "B0"),
+                        // classifyRelation(a[0], b[2], "A0", "B2"),
+                        // classifyRelation(a[2], b[0], "A2", "B0"),
+                        classifyRelation(a[1], b[2], "A1", "B2"),
+                        classifyRelation(a[2], b[1], "A2", "B1"),
+                    },
+                    "-");
             };
+
+            std::vector<std::string> res = {
+                build(p[0], p[1]),
+                build(p[1], p[0]),
+            };
+            util::normalize(res);
+
+            return res;
         }
     };
 

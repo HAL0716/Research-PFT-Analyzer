@@ -9,10 +9,15 @@ namespace Analysis {
     class Strategy {
       public:
         virtual ~Strategy() = default;
+
         std::vector<std::string> run(const ProductSet& products) {
             if (!validateInput(products))
                 throw std::invalid_argument("Invalid input for the strategy.");
-            return compute(products);
+
+            std::vector<Product> sorted(products.begin(), products.end());
+            std::sort(sorted.begin(), sorted.end());
+
+            return buildRelations(sorted);
         }
 
       protected:
@@ -34,7 +39,7 @@ namespace Analysis {
 
       private:
         virtual bool validateInput(const ProductSet&) const = 0;
-        virtual std::vector<std::string> compute(const ProductSet&) = 0;
+        virtual std::vector<std::string> buildRelations(const std::vector<Product>&) const = 0;
     };
 
 } // namespace Analysis

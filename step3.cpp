@@ -26,13 +26,14 @@ namespace {
         auto toRecord = [&](const auto& row1, const auto& row2) -> std::string {
             if (row1.size() != 4)
                 throw std::runtime_error("Invalid Row1: " + util::join(row1, ","));
-            if (row2.size() != 2)
+            if (row2.size() % 2 != 0)
                 throw std::runtime_error("Invalid Row2: " + util::join(row2, ","));
 
             std::vector<std::string> res;
             res.push_back(resolve(row1[0], row1[1], decoder1));
             res.push_back(resolve(row1[2], row1[3], decoder1));
-            res.push_back(resolve(row2[0], row2[1], decoder2));
+            for (size_t i = 0; i < row2.size(); i += 2)
+                res.push_back(resolve(row2[i], row2[i + 1], decoder2));
 
             return util::join(res, ",");
         };

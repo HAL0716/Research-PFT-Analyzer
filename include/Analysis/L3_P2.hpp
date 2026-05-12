@@ -5,6 +5,9 @@
 namespace Analysis {
 
     class L3_P2 : public Strategy {
+      public:
+        using Strategy::Strategy;
+
       private:
         bool validateInput(const ProductSet& ps) const override {
             return ps.size() == 2 && ps.begin()->size() == 3;
@@ -29,6 +32,9 @@ namespace Analysis {
                         // classifyRelation(a[2], b[0], "A2", "B0"),
                         classifyRelation(a[1], b[2], "A1", "B2"),
                         classifyRelation(a[2], b[1], "A2", "B1"),
+                        // sizeChecker(util::setUnion(a[0], b[0])),
+                        sizeChecker(util::setUnion(a[1], b[1])),
+                        // sizeChecker(util::setUnion(a[2], b[2])),
                     },
                     "-");
             };

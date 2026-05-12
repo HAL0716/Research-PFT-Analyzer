@@ -5,6 +5,9 @@
 namespace Analysis {
 
     class L3_P1 : public Strategy {
+      public:
+        using Strategy::Strategy;
+
       private:
         bool validateInput(const ProductSet& ps) const override {
             return ps.size() == 1 && ps.begin()->size() == 3;

@@ -8,6 +8,8 @@ namespace Analysis {
 
     class Strategy {
       public:
+        Strategy(const Config& cfg) : cfg(cfg) {}
+
         virtual ~Strategy() = default;
 
         std::vector<std::string> run(const ProductSet& products) {
@@ -21,6 +23,8 @@ namespace Analysis {
         }
 
       protected:
+        Config cfg;
+
         std::string classifyRelation(const SymbolSet& a, const SymbolSet& b, const std::string& labelA, const std::string& labelB) const {
             if (!util::hasIntersection(a, b))
                 return "素";
@@ -35,6 +39,10 @@ namespace Analysis {
                 return labelA;
 
             return "交";
+        }
+
+        std::string sizeChecker(const SymbolSet& s) const {
+            return (s.size() == util::calcPower(cfg.Q, cfg.T)) ? "全" : "非全";
         }
 
       private:

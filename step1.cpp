@@ -77,7 +77,7 @@ namespace {
         }
 
         bool hasNotAllSymbols(const ProductSet& ps) const {
-            if (ps.size() < 2)
+            if (!cfg_.FILTER || ps.size() < 2)
                 return true;
             std::set<Symbol> allSymbols;
             for (const auto& p : ps)
@@ -156,7 +156,7 @@ namespace {
 
         std::set<decltype(perms)::value_type> filteredPerms;
         for (const auto& p : perms)
-            if (p.front() != symbols.size() && p.back() != symbols.size())
+            if (!cfg.FILTER || (p.front() != symbols.size() && p.back() != symbols.size()))
                 filteredPerms.insert(p);
 
         const auto groups = util::Combinatorics::combs_r(filteredPerms, cfg.P);

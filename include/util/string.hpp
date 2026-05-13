@@ -32,4 +32,12 @@ namespace util {
         return result;
     }
 
+    inline std::string to_lower(std::string_view str) {
+        std::string res(str);
+
+        std::transform(res.begin(), res.end(), res.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        return res;
+    }
+
 } // namespace util

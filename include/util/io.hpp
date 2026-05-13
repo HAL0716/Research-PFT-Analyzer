@@ -92,14 +92,14 @@ namespace util {
         void commit() {
             ofs_.close();
 
+            if (fs::exists(finalPath_))
+                fs::remove(finalPath_);
+
             if (fs::file_size(tmpPath_) == 0) {
                 fs::remove(tmpPath_);
                 committed_ = true;
                 return;
             }
-
-            if (fs::exists(finalPath_))
-                fs::remove(finalPath_);
 
             fs::rename(tmpPath_, finalPath_);
             committed_ = true;

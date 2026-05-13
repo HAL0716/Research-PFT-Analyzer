@@ -66,14 +66,14 @@ int main() {
     for (size_t N = baseConfig.P; N <= maxN; ++N) {
         const auto cfg = baseConfig.withN(N);
 
+        util::SafeOutput out(cfg.toPath("step2-1"));
+
         if (shouldSkip(cfg))
             continue;
 
         const auto rows = util::readCSV(cfg.toPath("step1"));
         if (rows.empty())
             continue;
-
-        util::SafeOutput out(cfg.toPath("step2-1"));
 
         try {
             processRows(rows, out.stream(), cfg);

@@ -211,6 +211,9 @@ int main() {
     util::setupSignalHandler();
 
     Config cfg("config.txt");
+
+    util::SafeOutput out(cfg.toPath("step5", false));
+
     if (shouldSkip(cfg))
         return 0;
 
@@ -223,7 +226,6 @@ int main() {
     Analyzer analyzer(records);
     const auto result = analyzer.run();
 
-    util::SafeOutput out(cfg.toPath("step5", false));
     writeOutput(result, out);
     out.commit();
 

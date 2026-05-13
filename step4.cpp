@@ -55,6 +55,8 @@ int main() {
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
+    util::SafeOutput out(baseConfig.toPath("step4", false));
+
     FeatureToVertices res;
 
     for (size_t N = baseConfig.P; N <= maxN; ++N) {
@@ -71,8 +73,6 @@ int main() {
 
         processRows(row, res);
     }
-
-    util::SafeOutput out(baseConfig.toPath("step4", false));
 
     try {
         writeOutput(res, out.stream());

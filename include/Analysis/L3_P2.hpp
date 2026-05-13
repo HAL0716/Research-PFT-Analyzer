@@ -17,6 +17,7 @@ namespace Analysis {
             auto build = [&](const Product& a, const Product& b) {
                 return util::join(
                     std::vector{
+                        hasIntersection(a, b),
                         classifyRelation(a[0], a[1], "A0", "A1"),
                         // classifyRelation(a[0], a[2], "A0", "A2"),
                         classifyRelation(a[1], a[2], "A1", "A2"),

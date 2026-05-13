@@ -45,6 +45,13 @@ namespace Analysis {
             return (s.size() == util::calcPower(cfg.Q, cfg.T)) ? "全" : "非全";
         }
 
+        std::string hasIntersection(const Product& a, const Product& b) const {
+            std::vector<std::string> res;
+            for (size_t i = 0; i < a.size(); ++i)
+                res.push_back(util::hasIntersection(a[i], b[i]) ? "T" : "F");
+            return util::join(res, "");
+        }
+
       private:
         virtual bool validateInput(const ProductSet&) const = 0;
         virtual std::vector<std::string> buildRelations(const std::vector<Product>&) const = 0;

@@ -91,6 +91,8 @@ namespace {
             std::set<util::csvRow> res;
             size_t total = 1 << records[0].features[0].size();
             for (size_t mask = 0; mask < total; ++mask) {
+                util::checkInterrupted();
+
                 Logger::progress(mask + 1, total, "Masking : ", true);
 
                 for (const auto& [_, indices] : groupByMask(mask)) {

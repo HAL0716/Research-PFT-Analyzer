@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "Transform.hpp"
 #include "Types.hpp"
+#include "Validator/Engine.hpp"
 #include "util/util.hpp"
 
 namespace {
@@ -21,127 +22,6 @@ namespace {
 
         return symbols;
     }
-
-    Product applyMap(const Product& p, const Alphabet& alpha, const Symbol& map) {
-        Product result;
-
-        for (const auto& symSet : p) {
-            SymbolSet mappedSet;
-
-            for (const auto& sym : symSet)
-                mappedSet.insert(alpha.add(sym, map));
-
-            result.push_back(mappedSet);
-        }
-
-        return result;
-    }
-
-    ProductSet applyMap(const ProductSet& ps, const Alphabet& alpha, const Symbol& map) {
-        ProductSet out;
-
-        for (const auto& p : ps)
-            out.insert(applyMap(p, alpha, map));
-
-        return out;
-    }
-
-    class Validator {
-      public:
-        Validator(const Config& cfg, const Alphabet& alpha, const SymbolSet& symbols)
-            : cfg_(cfg), alpha_(alpha), symbols_(symbols) {
-        }
-
-        bool operator()(const ProductSet& ps) const {
-            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNotAllSymbols(ps) && hasNoIntersection(ps) && arePairIndependent(ps) && hasMappingInvariance(ps);
-        }
-
-      private:
-        const Config& cfg_;
-        const Alphabet& alpha_;
-        const SymbolSet& symbols_;
-
-        bool hasCorrectSize(const ProductSet& ps) const {
-            return ps.size() == cfg_.P;
-        }
-
-        bool hasFirstSymbol(const ProductSet& ps) const {
-            const Symbol& target = *symbols_.begin();
-
-            for (const auto& p : ps)
-                for (const auto& s : p[0])
-                    if (s == target)
-                        return true;
-
-            return false;
-        }
-
-        bool hasNotAllSymbols(const ProductSet& ps) const {
-            if (!cfg_.FILTER || ps.size() < 2)
-                return true;
-            std::set<Symbol> allSymbols;
-            for (const auto& p : ps)
-                allSymbols.insert(p[0].begin(), p[0].end());
-            return allSymbols != symbols_;
-        }
-
-        bool hasNoIntersection(const ProductSet& ps) const {
-            if (ps.size() < 2)
-                return true;
-
-            auto intersect = [](const Product& a, const Product& b) {
-                for (size_t i = 0; i < (a.size() - 1); ++i)
-                    if (!util::hasIntersection(a[i], b[i]))
-                        return false;
-                return true;
-            };
-
-            for (auto it1 = ps.begin(); it1 != ps.end(); ++it1)
-                for (auto it2 = std::next(it1); it2 != ps.end(); ++it2)
-                    if (intersect(*it1, *it2))
-                        return false;
-
-            return true;
-        }
-
-        bool arePairIndependent(const ProductSet& ps) const {
-            if (ps.size() < 2)
-                return true;
-
-            auto independent = [](const Product& a, const Product& b) {
-                for (size_t skip = 0; skip < a.size(); ++skip) {
-                    bool equal = true;
-                    for (size_t i = 0; i < a.size(); ++i) {
-                        if (i == skip)
-                            continue;
-                        if (a[i] != b[i]) {
-                            equal = false;
-                            break;
-                        }
-                    }
-
-                    if (equal)
-                        return false;
-                }
-                return true;
-            };
-
-            for (auto it1 = ps.begin(); it1 != ps.end(); ++it1)
-                for (auto it2 = std::next(it1); it2 != ps.end(); ++it2)
-                    if (!independent(*it1, *it2))
-                        return false;
-
-            return true;
-        }
-
-        bool hasMappingInvariance(const ProductSet& ps) const {
-            std::set<SymbolSet> mappedWords;
-            for (const auto& m : symbols_)
-                mappedWords.insert(Transform::toWords(applyMap(ps, alpha_, m)));
-
-            return Transform::toWords(ps) == *mappedWords.begin();
-        }
-    };
 
     auto genBluePrint(const Config& cfg, const SymbolSet& symbols) {
         auto calcSum = [](const std::vector<std::vector<size_t>>& group) -> util::ull {
@@ -170,7 +50,7 @@ namespace {
         return res;
     }
 
-    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid, std::ostream& out) {
+    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator::Engine& isValid, std::ostream& out) {
         const auto base = genBluePrint(cfg, symbols);
         if (base.empty())
             return;
@@ -230,7 +110,7 @@ int main() {
         util::SafeOutput out(cfg.toPath("step1"));
 
         try {
-            const Validator validate(cfg, alpha, symbols);
+            const Validator::Engine validate(cfg, alpha, symbols);
             genProductSet(cfg, symbols, validate, out.stream());
 
             out.commit();

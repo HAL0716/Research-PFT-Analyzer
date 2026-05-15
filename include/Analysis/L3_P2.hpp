@@ -15,27 +15,30 @@ namespace Analysis {
 
         std::vector<std::string> buildRelations(const std::vector<Product>& p) const override {
             auto build = [&](const Product& a, const Product& b) {
+                const Product c{
+                    util::setUnion(a[0], b[0]),
+                    util::setUnion(a[1], b[1]),
+                    util::setUnion(a[2], b[2]),
+                };
+
                 return util::join(
                     std::vector{
-                        hasIntersection(a, b),
+                        // 1-1-2-1
                         classifyRelation(a[0], a[1], "A0", "A1"),
-                        // classifyRelation(a[0], a[2], "A0", "A2"),
                         classifyRelation(a[1], a[2], "A1", "A2"),
                         classifyRelation(b[0], b[1], "B0", "B1"),
-                        // classifyRelation(b[0], b[2], "B0", "B2"),
                         classifyRelation(b[1], b[2], "B1", "B2"),
                         classifyRelation(a[0], b[0], "A0", "B0"),
-                        // classifyRelation(a[1], b[1], "A1", "B1"),
-                        // classifyRelation(a[2], b[2], "A2", "B2"),
-                        // classifyRelation(a[0], b[1], "A0", "B1"),
-                        // classifyRelation(a[1], b[0], "A1", "B0"),
-                        // classifyRelation(a[0], b[2], "A0", "B2"),
-                        // classifyRelation(a[2], b[0], "A2", "B0"),
+
+                        // 1-2-1-1
                         classifyRelation(a[1], b[2], "A1", "B2"),
                         classifyRelation(a[2], b[1], "A2", "B1"),
-                        // sizeChecker(util::setUnion(a[0], b[0])),
-                        sizeChecker(util::setUnion(a[1], b[1])),
-                        // sizeChecker(util::setUnion(a[2], b[2])),
+                        classifyRelation(a[0], b[0], "A0", "B0"),
+                        classifyRelation(a[0], c[1], "A0", "C1"),
+                        classifyRelation(b[0], c[1], "B0", "C1"),
+                        classifyRelation(a[1], c[2], "A1", "C2"),
+                        classifyRelation(b[1], c[2], "B1", "C2"),
+                        classifyRelation(a[2], b[2], "A2", "B2"),
                     },
                     "-");
             };

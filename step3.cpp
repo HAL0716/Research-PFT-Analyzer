@@ -65,7 +65,7 @@ namespace {
     }
 
     bool shouldSkip(const Config& cfg) {
-        return std::filesystem::exists(cfg.toPath("step3")) && !cfg.UPDATE;
+        return !std::filesystem::exists(cfg.toPath("step2-1")) || !std::filesystem::exists(cfg.toPath("step2-2")) || (std::filesystem::exists(cfg.toPath("step3")) && !cfg.UPDATE);
     }
 
 } // namespace

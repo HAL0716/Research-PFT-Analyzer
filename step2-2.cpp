@@ -12,7 +12,6 @@
 namespace {
 
     void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
-        Alphabet alphabet(cfg.Q);
         Analysis::Engine engine(cfg);
         util::Encoder encoder;
 

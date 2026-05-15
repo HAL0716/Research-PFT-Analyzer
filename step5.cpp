@@ -25,7 +25,7 @@ namespace {
                 std::vector<std::string> key;
                 key.reserve(feat.size());
                 for (size_t i = 0; i < feat.size(); ++i)
-                    key.push_back((mask & (1 << i)) ? feat[i] : "*");
+                    key.push_back((mask & (size_t{1} << i)) ? feat[i] : "*");
                 res.push_back(util::join(key, ","));
             }
             return res;
@@ -90,7 +90,7 @@ namespace {
 
         std::set<util::csvRow> run() {
             std::set<util::csvRow> res;
-            size_t total = 1 << records[0].features[0].size();
+            size_t total = size_t{1} << records[0].features[0].size();
             for (size_t mask = 0; mask < total; ++mask) {
                 util::checkInterrupted();
 

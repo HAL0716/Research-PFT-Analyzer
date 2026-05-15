@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <limits>
 #include <ostream>
+#include <set>
 #include <span>
 #include <string>
 #include <tuple>
@@ -74,9 +76,8 @@ namespace {
                 features.push_back(util::split(feat, '-'));
             std::sort(features.begin(), features.end());
 
-            std::string vertNums = row[1];
-
-            records.emplace(Record{features, vertNums});
+            for (size_t i = 1; i < row.size(); ++i)
+                records.emplace(Record{features, row[i]});
         }
     }
 

@@ -12,19 +12,26 @@
 namespace {
 
     void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
-        auto format = [](const Graph::Verts& verts, const Config& cfg) -> std::string {
-            std::vector<size_t> res(cfg.L / cfg.T + 1, 0);
+        Alphabet alphabet(cfg.Q);
+        Graph graph(cfg, alphabet);
+        util::Encoder encoder;
+
+        std::vector<size_t> tmp(cfg.L / cfg.T + 1);
+
+        auto format = [&](const Graph::Verts& verts) -> std::string {
+            std::fill(tmp.begin(), tmp.end(), 0);
             for (const auto& s : verts) {
                 size_t pos = s.find('+');
                 if (pos == std::string::npos)
                     pos = s.size();
-                res[pos / cfg.T]++;
+                tmp[pos / cfg.T]++;
             }
-            return util::join(res, ",");
-        };
 
-        Alphabet alphabet(cfg.Q);
-        Graph graph(cfg, alphabet);
+            const auto res = util::join(tmp, "-");
+            const auto [id, inserted] = encoder.getOrCreateId(res);
+
+            return std::to_string(id) + "," + (inserted ? res : "");
+        };
 
         size_t cnt = 0;
         const size_t total = rows.size();
@@ -36,16 +43,16 @@ namespace {
             Logger::progress(++cnt, total, label, true);
 
             graph.set(Transform::toWords(row, cfg));
-            const auto before = graph.getV();
+            const auto res1 = format(graph.getV());
             graph.minimize();
-            const auto after = graph.getV();
+            const auto res2 = format(graph.getV());
 
-            out << format(before, cfg) << ',' << format(after, cfg) << '\n';
+            out << res1 << ',' << res2 << '\n';
         }
     }
 
-    bool shouldSkip(const Config& cfg, bool update) {
-        return std::filesystem::exists(cfg.toPath("step2-1")) && !update;
+    bool shouldSkip(const Config& cfg) {
+        return std::filesystem::exists(cfg.toPath("step2-1")) && !cfg.UPDATE;
     }
 
 } // namespace
@@ -53,22 +60,20 @@ namespace {
 int main() {
     util::setupSignalHandler();
 
-    constexpr bool UPDATE = false;
-
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
     for (size_t N = baseConfig.P; N <= maxN; ++N) {
         const auto cfg = baseConfig.withN(N);
 
-        if (shouldSkip(cfg, UPDATE))
+        util::SafeOutput out(cfg.toPath("step2-1"));
+
+        if (shouldSkip(cfg))
             continue;
 
         const auto rows = util::readCSV(cfg.toPath("step1"));
         if (rows.empty())
             continue;
-
-        util::SafeOutput out(cfg.toPath("step2-1"));
 
         try {
             processRows(rows, out.stream(), cfg);

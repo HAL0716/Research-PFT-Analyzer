@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "Transform.hpp"
 #include "Types.hpp"
+#include "Validator/Engine.hpp"
 #include "util/util.hpp"
 
 namespace {
@@ -22,87 +23,6 @@ namespace {
         return symbols;
     }
 
-    Product applyMap(const Product& p, const Alphabet& alpha, const Symbol& map) {
-        Product result;
-
-        for (const auto& symSet : p) {
-            SymbolSet mappedSet;
-
-            for (const auto& sym : symSet)
-                mappedSet.insert(alpha.add(sym, map));
-
-            result.push_back(mappedSet);
-        }
-
-        return result;
-    }
-
-    ProductSet applyMap(const ProductSet& ps, const Alphabet& alpha, const Symbol& map) {
-        ProductSet out;
-
-        for (const auto& p : ps)
-            out.insert(applyMap(p, alpha, map));
-
-        return out;
-    }
-
-    class Validator {
-      public:
-        Validator(const Config& cfg, const Alphabet& alpha, const SymbolSet& symbols)
-            : cfg_(cfg), alpha_(alpha), symbols_(symbols) {
-        }
-
-        bool operator()(const ProductSet& ps) const {
-            return hasCorrectSize(ps) && hasFirstSymbol(ps) && hasNoIntersection(ps) && hasMappingInvariance(ps);
-        }
-
-      private:
-        const Config& cfg_;
-        const Alphabet& alpha_;
-        const SymbolSet& symbols_;
-
-        bool hasCorrectSize(const ProductSet& ps) const {
-            return ps.size() == cfg_.P;
-        }
-
-        bool hasFirstSymbol(const ProductSet& ps) const {
-            const Symbol& target = *symbols_.begin();
-
-            for (const auto& p : ps)
-                for (const auto& s : p[0])
-                    if (s == target)
-                        return true;
-
-            return false;
-        }
-
-        bool hasNoIntersection(const ProductSet& ps) const {
-            std::vector<Product> v(ps.begin(), ps.end());
-
-            auto intersect = [](const Product& a, const Product& b) {
-                for (size_t i = 0; i < a.size(); ++i)
-                    if (!util::hasIntersection(a[i], b[i]))
-                        return false;
-                return true;
-            };
-
-            for (size_t i = 0; i < v.size(); ++i)
-                for (size_t j = i + 1; j < v.size(); ++j)
-                    if (intersect(v[i], v[j]))
-                        return false;
-
-            return true;
-        }
-
-        bool hasMappingInvariance(const ProductSet& ps) const {
-            std::set<SymbolSet> mappedWords;
-            for (const auto& m : symbols_)
-                mappedWords.insert(Transform::toWords(applyMap(ps, alpha_, m)));
-
-            return Transform::toWords(ps) == *mappedWords.begin();
-        }
-    };
-
     auto genBluePrint(const Config& cfg, const SymbolSet& symbols) {
         auto calcSum = [](const std::vector<std::vector<size_t>>& group) -> util::ull {
             util::ull sum = 0;
@@ -116,7 +36,7 @@ namespace {
 
         std::set<decltype(perms)::value_type> filteredPerms;
         for (const auto& p : perms)
-            if (p.front() != symbols.size() && p.back() != symbols.size())
+            if (!cfg.FILTER || (p.front() != symbols.size() && p.back() != symbols.size()))
                 filteredPerms.insert(p);
 
         const auto groups = util::Combinatorics::combs_r(filteredPerms, cfg.P);
@@ -130,51 +50,75 @@ namespace {
         return res;
     }
 
-    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator& isValid) {
+    auto genProductSet(const Config& cfg, const SymbolSet& symbols, const Validator::Engine& isValid, std::ostream& out) {
         const auto base = genBluePrint(cfg, symbols);
         if (base.empty())
             return;
 
-        auto csv = util::createFile(cfg.toPath("step1"));
+        size_t cnt = 0;
+        const size_t total = base.size();
+        const std::string label = "Generating N = " + std::to_string(cfg.N) + ": ";
 
-        size_t cnt = 0, total = base.size();
         for (const auto& group : base) {
-            Logger::progress(++cnt, total, "Generating N = " + std::to_string(cfg.N) + ": ", true);
+            util::checkInterrupted();
+
+            Logger::progress(++cnt, total, label, true);
 
             std::vector<ProductSet> candidates;
             for (const auto& pattern : group) {
+                util::checkInterrupted();
+
                 std::vector<std::set<SymbolSet>> combs;
-                for (auto n : pattern)
+                for (auto n : pattern) {
+                    util::checkInterrupted();
+
                     combs.push_back(util::Combinatorics::combs(symbols, n));
+                }
 
                 candidates.push_back(util::Product::asVec(combs));
             }
 
             for (const auto& ps : util::Product::asSet(candidates))
-                if (isValid(ps))
-                    csv << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
+                if (isValid(ps)) {
+                    util::checkInterrupted();
+                    out << util::join(Transform::toCsvRow(ps, cfg), ",") << "\n";
+                }
         }
+    }
+
+    bool shouldSkip(const Config& cfg) {
+        return std::filesystem::exists(cfg.toPath("step1")) && !cfg.UPDATE;
     }
 
 } // namespace
 
 int main() {
-    const bool UPDATE = false;
+    util::setupSignalHandler();
 
-    const Config base("config.txt");
+    const Config baseConfig("config.txt");
+    const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
-    const Alphabet alpha(base.Q);
-    const SymbolSet symbols = genSymbols(base, alpha);
+    const Alphabet alpha(baseConfig.Q);
+    const SymbolSet symbols = genSymbols(baseConfig, alpha);
 
-    const size_t maxN = util::calcPower(base.Q, base.L);
-    for (size_t N = base.P; N <= maxN; ++N) {
-        const auto cfg = base.withN(N);
+    for (size_t N = baseConfig.P; N <= maxN; ++N) {
+        const auto cfg = baseConfig.withN(N);
 
-        if (std::filesystem::exists(cfg.toPath("step1")) && !UPDATE)
+        if (shouldSkip(cfg))
             continue;
 
-        const Validator validate(cfg, alpha, symbols);
-        genProductSet(cfg, symbols, validate);
+        util::SafeOutput out(cfg.toPath("step1"));
+
+        try {
+            const Validator::Engine validate(cfg, alpha, symbols);
+            genProductSet(cfg, symbols, validate, out.stream());
+
+            out.commit();
+        } catch (const std::exception& e) {
+            if (std::string(e.what()) == "Interrupted")
+                return 0;
+            throw;
+        }
     }
 
     return 0;

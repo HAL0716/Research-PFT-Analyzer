@@ -1,45 +1,29 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "Analysis/Strategy.hpp"
-#include "util/util.hpp"
 
 namespace Analysis {
 
     class L3_P1 : public Strategy {
       public:
-        std::vector<std::string> analyze(const Config&, const Alphabet&, const ProductSet& prodSet) override {
-            if (!isValid(prodSet))
-                throw std::invalid_argument("Invalid product set");
-
-            const auto& p = *prodSet.begin();
-
-            return {
-                evaluate(p[0], p[1], "0", "1"),
-                // evaluate(p[0], p[2], "0", "2"),
-                evaluate(p[1], p[2], "1", "2")};
-        }
+        using Strategy::Strategy;
 
       private:
-        bool isValid(const ProductSet& ps) const {
+        bool validateInput(const ProductSet& ps) const override {
             return ps.size() == 1 && ps.begin()->size() == 3;
         }
 
-        std::string evaluate(const SymbolSet& a, const SymbolSet& b, const std::string& labelA, const std::string& labelB) const {
-            if (!util::hasIntersection(a, b))
-                return "素";
+        std::vector<std::string> buildRelations(const std::vector<Product>& p) const override {
+            const auto& a = p[0];
 
-            if (a == b)
-                return "等";
-
-            if (util::isSubset(a, b))
-                return labelB;
-
-            if (util::isSubset(b, a))
-                return labelA;
-
-            return "交";
+            return {
+                util::join(
+                    std::vector{
+                        classifyRelation(a[0], a[1], "0", "1"),
+                        // classifyRelation(a[0], a[2], "0", "2"),
+                        classifyRelation(a[1], a[2], "1", "2"),
+                    },
+                    "-")};
         }
     };
 

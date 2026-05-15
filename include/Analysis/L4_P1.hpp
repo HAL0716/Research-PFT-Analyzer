@@ -1,49 +1,33 @@
 #pragma once
 
-#include <stdexcept>
-
 #include "Analysis/Strategy.hpp"
-#include "util/util.hpp"
 
 namespace Analysis {
 
     class L4_P1 : public Strategy {
       public:
-        std::vector<std::string> analyze(const Config&, const Alphabet&, const ProductSet& prodSet) override {
-            if (!isValid(prodSet))
-                throw std::invalid_argument("Invalid product set");
-
-            const auto& p = *prodSet.begin();
-
-            return {
-                evaluate(p[0], p[1], "0", "1"),
-                evaluate(p[0], p[2], "0", "2"),
-                // evaluate(p[0], p[3], "0", "3"),
-                evaluate(p[1], p[2], "1", "2"),
-                evaluate(p[1], p[3], "1", "3"),
-                evaluate(p[2], p[3], "2", "3")};
-        }
+        using Strategy::Strategy;
 
       private:
-        bool isValid(const ProductSet& ps) const {
+        bool validateInput(const ProductSet& ps) const override {
             return ps.size() == 1 && ps.begin()->size() == 4;
         }
 
-        std::string evaluate(const SymbolSet& a, const SymbolSet& b, const std::string& labelA, const std::string& labelB) const {
-            if (!util::hasIntersection(a, b))
-                return "素";
+        std::vector<std::string> buildRelations(const std::vector<Product>& p) const override {
+            const auto& a = p[0];
 
-            if (a == b)
-                return "等";
-
-            if (util::isSubset(a, b))
-                return labelB;
-
-            if (util::isSubset(b, a))
-                return labelA;
-
-            return "交";
-        }
+            return {
+                util::join(
+                    std::vector{
+                        classifyRelation(a[0], a[1], "0", "1"),
+                        classifyRelation(a[0], a[2], "0", "2"),
+                        // classifyRelation(a[0], a[3], "0", "3"),
+                        classifyRelation(a[1], a[2], "1", "2"),
+                        classifyRelation(a[1], a[3], "1", "3"),
+                        classifyRelation(a[2], a[3], "2", "3"),
+                    },
+                    "-")};
+        };
     };
 
 } // namespace Analysis

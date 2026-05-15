@@ -7,8 +7,7 @@ namespace Analysis {
 
     class Engine {
       public:
-        Engine(Config c, Alphabet a)
-            : cfg_(std::move(c)), alpha_(std::move(a)), strategy_(Factory::create(cfg_)) {
+        Engine(const Config& cfg): strategy_(Factory::create(cfg)) {
         }
 
         void set(const ProductSet& prodSet) {
@@ -17,7 +16,7 @@ namespace Analysis {
             if (!strategy_)
                 return;
 
-            result = strategy_->analyze(cfg_, alpha_, prodSet);
+            result = strategy_->run(prodSet);
         }
 
         std::vector<std::string> getResult() const {
@@ -25,8 +24,6 @@ namespace Analysis {
         }
 
       private:
-        Config cfg_;
-        Alphabet alpha_;
         std::unique_ptr<Strategy> strategy_;
         std::vector<std::string> result;
     };

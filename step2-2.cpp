@@ -12,8 +12,17 @@
 namespace {
 
     void processRows(const util::csvData& rows, std::ostream& out, const Config& cfg) {
-        Alphabet alphabet(cfg.Q);
-        Analysis::Engine engine(cfg, alphabet);
+        Analysis::Engine engine(cfg);
+        util::Encoder encoder;
+
+        auto format = [&](const auto& result) -> std::string {
+            std::vector<std::string> formatted;
+            for (const auto& r : result) {
+                const auto [id, inserted] = encoder.getOrCreateId(r);
+                formatted.push_back(std::to_string(id) + "," + (inserted ? r : ""));
+            }
+            return util::join(formatted, ",");
+        };
 
         size_t cnt = 0;
         const size_t total = rows.size();
@@ -26,15 +35,14 @@ namespace {
 
             engine.set(Transform::toProductSet(row, cfg));
 
-            const auto res = engine.getResult();
-            out << util::join(res, ",") << '\n';
+            out << format(engine.getResult()) << '\n';
         }
     }
 
-    bool shouldSkip(const Config& cfg, bool update) {
+    bool shouldSkip(const Config& cfg) {
         if (!std::filesystem::exists(cfg.toPath("step2-1")))
             return true;
-        return std::filesystem::exists(cfg.toPath("step2-2")) && !update;
+        return std::filesystem::exists(cfg.toPath("step2-2")) && !cfg.UPDATE;
     }
 
 } // namespace
@@ -42,22 +50,20 @@ namespace {
 int main() {
     util::setupSignalHandler();
 
-    constexpr bool Update = false;
-
     const Config baseConfig("config.txt");
     const size_t maxN = util::calcPower(baseConfig.Q, baseConfig.L);
 
     for (size_t n = baseConfig.P; n <= maxN; ++n) {
         const Config cfg = baseConfig.withN(n);
 
-        if (shouldSkip(cfg, Update))
+        util::SafeOutput out(cfg.toPath("step2-2"));
+
+        if (shouldSkip(cfg))
             continue;
 
         const auto rows = util::readCSV(cfg.toPath("step1"));
         if (rows.empty())
             continue;
-
-        util::SafeOutput out(cfg.toPath("step2-2"));
 
         try {
             processRows(rows, out.stream(), cfg);

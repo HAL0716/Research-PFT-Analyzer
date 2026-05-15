@@ -10,6 +10,7 @@
 
 struct Config {
     size_t Q = 2, T = 2, L = 4, N = 4, P = 2, V = 3;
+    bool UPDATE = false, FILTER = true;
 
     explicit Config(const std::string& configFile = "config.txt") {
         init(configFile);
@@ -43,16 +44,23 @@ struct Config {
     void set(const std::string& path) {
         auto data = util::readCSV(path, util::FileErrorPolicy::THROW);
 
-        const std::unordered_map<std::string, size_t*> table = {
+        const std::unordered_map<std::string, size_t*> constTable = {
             {"Q", &Q}, {"T", &T}, {"L", &L}, {"N", &N}, {"P", &P}, {"V", &V}};
+        const std::unordered_map<std::string, bool*> modeTable = {
+            {"UPDATE", &UPDATE}, {"FILTER", &FILTER}};
 
         for (const auto& row : data) {
             if (row.size() != 2)
                 continue;
 
-            auto it = table.find(row[0]);
-            if (it != table.end()) {
+            auto it = constTable.find(row[0]);
+            if (it != constTable.end()) {
                 *(it->second) = std::stoul(row[1]);
+            }
+
+            auto boolIt = modeTable.find(row[0]);
+            if (boolIt != modeTable.end()) {
+                *(boolIt->second) = (util::to_lower(row[1]) == "true");
             }
         }
     }
